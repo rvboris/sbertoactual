@@ -15,6 +15,7 @@
 		"list": "tsx src/index.ts --mode=list",
 		"type-check": "tsc --project tsconfig.test.json",
 		"test": "npm run type-check && vitest run",
+		"coverage": "vitest run --coverage",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check --write ."
@@ -35,6 +36,7 @@
 		"@biomejs/biome": "2.4.3",
 		"@types/csv-parse": "^1.1.12",
 		"@types/node": "^25.3.0",
+		"@vitest/coverage-v8": "^4.0.18",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.18"

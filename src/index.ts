@@ -207,8 +207,12 @@ export default class SberToActual extends Command {
 		await this.initApi();
 		const accounts = await api.getAccounts();
 		logger.info`AVAILABLE ACCOUNTS:`;
-		for (const acc of accounts) {
-			logger.info`Name: ${acc.name.padEnd(20)} ID: ${acc.id}`;
+		if (accounts.length === 0) {
+			logger.info`No accounts found.`;
+		} else {
+			for (const acc of accounts) {
+				logger.info`Name: ${acc.name.padEnd(20)} ID: ${acc.id}`;
+			}
 		}
 		await api.shutdown();
 	}

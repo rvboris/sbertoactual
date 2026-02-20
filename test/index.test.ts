@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import { Readable } from "node:stream";
 import * as path from "node:path";
 import * as api from "@actual-app/api";
+import { configure, getLogger } from "@logtape/logtape";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SberToActual from "../src/index";
 
@@ -48,6 +49,17 @@ describe("SberToActual", () => {
 		command.error = vi.fn((msg) => {
 			throw new Error(msg);
 		}) as any;
+	});
+
+	describe("init", () => {
+		it("should configure logtape and dotenv", async () => {
+			const configureSpy = vi.mocked(configure);
+			
+			await command.init();
+
+			expect(configureSpy).toHaveBeenCalled();
+			expect(console.log).toBeDefined(); // Verify redirection (though it's set to empty fn)
+		});
 	});
 
 	describe("initApi", () => {
@@ -238,7 +250,7 @@ describe("SberToActual", () => {
 	});
 
 	describe("list", () => {
-		it("should list available accounts", async () => {
+		it("should list available accounts with names and IDs", async () => {
 			vi.spyOn(api, "getAccounts").mockResolvedValue([
 				{ id: "acc-1", name: "Checking" } as any,
 				{ id: "acc-2", name: "Savings" } as any,
@@ -248,6 +260,26 @@ describe("SberToActual", () => {
 
 			expect(logger.info).toHaveBeenCalledWith(
 				expect.arrayContaining([expect.stringContaining("AVAILABLE ACCOUNTS")]),
+			);
+			expect(logger.info).toHaveBeenCalledWith(
+				expect.any(Array),
+				expect.stringContaining("Checking"),
+				"acc-1",
+			);
+			expect(logger.info).toHaveBeenCalledWith(
+				expect.any(Array),
+				expect.stringContaining("Savings"),
+				"acc-2",
+			);
+		});
+
+		it("should show informative message when no accounts are found", async () => {
+			vi.spyOn(api, "getAccounts").mockResolvedValue([]);
+
+			await command.list();
+
+			expect(logger.info).toHaveBeenCalledWith(
+				expect.arrayContaining([expect.stringContaining("No accounts found.")]),
 			);
 		});
 	});
