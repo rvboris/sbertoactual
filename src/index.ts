@@ -1,11 +1,12 @@
 import * as fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import * as path from "node:path";
 import * as api from "@actual-app/api";
+import { Command, Flags } from "@oclif/core";
+import { parse } from "csv-parse";
+import * as dotenv from "dotenv";
 import { configure, dispose, getLogger } from "@logtape/logtape";
 import { prettyFormatter } from "@logtape/pretty";
-import { Command, Flags } from "@oclif/core";
-import { parse } from "csv-parse/sync";
-import * as dotenv from "dotenv";
 
 const logger = getLogger(["sber-actual"]);
 
@@ -33,84 +34,104 @@ export default class SberToActual extends Command {
 		}),
 	};
 
+	private get appConfig() {
+		return {
+			serverURL: process.env.ACTUAL_SERVER_URL || "",
+			serverPassword: process.env.ACTUAL_SERVER_PASSWORD || "",
+			syncId: process.env.ACTUAL_SYNC_ID || "",
+			budgetPassword: process.env.ACTUAL_BUDGET_PASSWORD || "",
+			accountId: process.env.ACTUAL_ACCOUNT_ID || "",
+			groupName: process.env.ACTUAL_GROUP_NAME || "Импорт из Сбера",
+			inputFile: process.env.INPUT_FILE || "Выписка по счёту дебетовой карты.csv",
+			outputFile: process.env.OUTPUT_FILE || "actual_import.csv",
+		};
+	}
+
 	private getPath(filename: string): string {
 		return path.join(process.cwd(), DATA_DIR, filename);
 	}
 
 	async initApi() {
-		logger.info`Connecting to server...`;
+		const { serverURL, serverPassword, syncId, budgetPassword } = this.appConfig;
+
+		logger.info`Connecting to server: ${serverURL}`;
 		await api.init({
-			serverURL: process.env.ACTUAL_SERVER_URL || "",
-			password: process.env.ACTUAL_SERVER_PASSWORD || "",
+			serverURL,
+			password: serverPassword,
 			dataDir: this.getPath("actual-data"),
 		});
 
 		logger.info`Opening budget...`;
-		await api.downloadBudget(process.env.ACTUAL_SYNC_ID || "", {
-			password: process.env.ACTUAL_BUDGET_PASSWORD || "",
-		});
+		await api.downloadBudget(syncId, { password: budgetPassword });
 	}
 
-	async convert() {
-		const inputFile =
-			process.env.INPUT_FILE || "Выписка по счёту дебетовой карты.csv";
-		const outputFile = process.env.OUTPUT_FILE || "actual_import.csv";
-
+	/**
+	 * Convert raw Sberbank CSV to internal format
+	 */
+	async convert(): Promise<TransactionRecord[]> {
+		const { inputFile, outputFile } = this.appConfig;
 		const inputPath = this.getPath(inputFile);
-		const outputPath = this.getPath(outputFile);
 
-		logger.info`Converting ${inputPath}...`;
-		const data = await fs.readFile(inputPath, "utf8");
-		const lines = data.split("\n");
+		logger.info`Reading Sberbank CSV: ${inputPath}`;
+		const records: TransactionRecord[] = [];
 
-		const outputHeaders = ["Date", "Payee", "Category", "Notes", "Amount"];
-		const result = [outputHeaders.join(",")];
+		const parser = createReadStream(inputPath).pipe(
+			parse({
+				delimiter: ";",
+				from_line: 2,
+				skip_empty_lines: true,
+				trim: true,
+				relax_column_count: true,
+			}),
+		);
 
-		for (let i = 1; i < lines.length; i++) {
-			const line = lines[i].trim();
-			if (!line) continue;
-
-			const cols = line.split(";");
-			if (cols.length < 6) continue;
-
-			const rawDate = cols[0] || "";
-			const date = rawDate.split(" ")[0];
-
-			const authCode = (cols[2] || "").trim();
-			const payee = (cols[3] || "").trim().replace(/"/g, '""');
-			const category = (cols[4] || "").trim().replace(/"/g, '""');
-			const amount = (cols[5] || "0").trim();
-			const notes = authCode ? `AuthCode: ${authCode}` : "";
-
-			result.push(`${date},"${payee}","${category}","${notes}",${amount}`);
+		for await (const cols of parser) {
+			if (cols.length >= 6) {
+				records.push({
+					Date: (cols[0] || "").split(" ")[0],
+					Payee: cols[3] || "",
+					Category: cols[4] || "",
+					Notes: cols[2] ? `AuthCode: ${cols[2]}` : "",
+					Amount: (cols[5] || "0").replace(/\s/g, "").replace(",", "."),
+				});
+			}
 		}
 
-		await fs.writeFile(outputPath, result.join("\n"));
-		logger.info`Processed ${result.length - 1} transactions to ${outputPath}`;
+		const outputPath = this.getPath(outputFile);
+		const csvContent = [
+			"Date,Payee,Category,Notes,Amount",
+			...records.map(
+				(r) =>
+					`"${r.Date}","${r.Payee.replace(/"/g, '""')}","${r.Category.replace(
+						/"/g,
+						'""',
+					)}","${r.Notes.replace(/"/g, '""')}",${r.Amount}`,
+			),
+		].join("\n");
+
+		await fs.writeFile(outputPath, csvContent);
+		logger.info`Successfully converted ${records.length} transactions to ${outputPath}`;
+
+		return records;
 	}
 
-	async setup() {
-		const csvFile = process.env.OUTPUT_FILE || "actual_import.csv";
-		const csvPath = this.getPath(csvFile);
-		const groupName = process.env.ACTUAL_GROUP_NAME || "Импорт из Сбера";
+	/**
+	 * Automatically create missing categories
+	 */
+	async setup(providedRecords?: TransactionRecord[]) {
+		const records = providedRecords || (await this.loadImportedCsv());
+		const { groupName } = this.appConfig;
 
 		await this.initApi();
 
-		logger.info`Scanning categories from ${csvPath}...`;
-		const fileContent = await fs.readFile(csvPath, "utf8");
-		const records = parse(fileContent, {
-			columns: true,
-			skip_empty_lines: true,
-		}) as TransactionRecord[];
 		const uniqueCategories = [
-			...new Set(records.map((r) => r.Category).filter((c) => c?.trim())),
+			...new Set(records.map((r) => r.Category).filter(Boolean)),
 		];
-
 		const groups = await api.getCategoryGroups();
 		let importGroup = groups.find((g) => g.name === groupName);
 
 		if (!importGroup) {
-			logger.info`Creating group "${groupName}"...`;
+			logger.info`Creating category group: ${groupName}`;
 			const groupId = await api.createCategoryGroup({ name: groupName });
 			importGroup = { id: groupId, name: groupName, is_income: false };
 		}
@@ -123,79 +144,60 @@ export default class SberToActual extends Command {
 		let createdCount = 0;
 		for (const catName of uniqueCategories) {
 			if (!existingNames.has(catName.toLowerCase()) && importGroup.id) {
-				logger.info`Creating category: ${catName}`;
-				await api.createCategory({
-					name: catName,
-					group_id: importGroup.id,
-				});
+				logger.info`Adding new category: ${catName}`;
+				await api.createCategory({ name: catName, group_id: importGroup.id });
 				createdCount++;
 			}
 		}
 
-		logger.info`Created ${createdCount} new categories.`;
+		logger.info`Category sync complete. Added ${createdCount} new categories.`;
 		await api.shutdown();
 	}
 
-	async upload() {
-		const csvFile = process.env.OUTPUT_FILE || "actual_import.csv";
-		const csvPath = this.getPath(csvFile);
-		const accountId = process.env.ACTUAL_ACCOUNT_ID;
+	/**
+	 * Upload transactions to Actual Budget
+	 */
+	async upload(providedRecords?: TransactionRecord[]) {
+		const records = providedRecords || (await this.loadImportedCsv());
+		const { accountId } = this.appConfig;
 
 		await this.initApi();
 
 		const accounts = await api.getAccounts();
-
-		if (!accountId) {
-			logger.warn`--- ACCOUNTS LIST ---`;
-			for (const acc of accounts) {
-				logger.info`Name: ${acc.name}, ID: ${acc.id}`;
-			}
-			logger.warn`----------------------`;
-			this.error("Please set ACTUAL_ACCOUNT_ID in your .env file.");
-		}
-
 		const account = accounts.find((a) => a.id === accountId);
-		if (!account) {
-			this.error(`Account with ID ${accountId} not found.`);
-		}
 
-		logger.info`Uploading to account: ${account.name}`;
+		if (!account) {
+			logger.error`Account ${accountId} not found. Available accounts:`;
+			for (const acc of accounts) logger.info` - ${acc.name} (${acc.id})`;
+			process.exit(1);
+		}
 
 		const categories = await api.getCategories();
 		const categoryMap = new Map(
-			categories.map((cat) => [cat.name.toLowerCase(), cat.id]),
+			categories.map((c) => [c.name.toLowerCase(), c.id]),
 		);
 
-		const fileContent = await fs.readFile(csvPath, "utf8");
-		const records = parse(fileContent, {
-			columns: true,
-			skip_empty_lines: true,
-			relax_quotes: true,
-		}) as TransactionRecord[];
-
 		const transactions = records.map((record) => {
-			const amount = Math.round(
-				parseFloat(record.Amount.replace(",", ".")) * 100,
-			);
-			const uniqueString = `${record.Date}${record.Payee}${record.Amount}${record.Notes}`;
-			const imported_id = Buffer.from(uniqueString)
+			const amount = Math.round(parseFloat(record.Amount) * 100);
+			const imported_id = Buffer.from(
+				`${record.Date}${record.Payee}${record.Amount}${record.Notes}`,
+			)
 				.toString("base64")
 				.substring(0, 64);
-			const categoryId = categoryMap.get(record.Category.toLowerCase());
 
 			return {
 				date: record.Date,
 				payee_name: record.Payee,
-				category: categoryId,
+				category: categoryMap.get(record.Category.toLowerCase()),
 				notes: record.Notes,
-				amount: amount,
+				amount,
 				account: accountId,
-				imported_id: imported_id,
+				imported_id,
 				cleared: true,
 			};
 		});
 
-		logger.info`Prepared ${transactions.length} transactions.`;
+		logger.info`Uploading ${transactions.length} transactions to "${account.name}"...`;
 		await api.importTransactions(accountId, transactions);
 		logger.info`Import successful!`;
 		await api.shutdown();
@@ -204,22 +206,27 @@ export default class SberToActual extends Command {
 	async list() {
 		await this.initApi();
 		const accounts = await api.getAccounts();
-
 		logger.info`AVAILABLE ACCOUNTS:`;
-		if (accounts.length === 0) {
-			logger.info`No accounts found.`;
-		} else {
-			for (const acc of accounts) {
-				logger.info`Name: ${acc.name} (ID: ${acc.id})`;
-			}
+		for (const acc of accounts) {
+			logger.info`Name: ${acc.name.padEnd(20)} ID: ${acc.id}`;
 		}
-
 		await api.shutdown();
+	}
+
+	private async loadImportedCsv(): Promise<TransactionRecord[]> {
+		const csvPath = this.getPath(this.appConfig.outputFile);
+		const records: TransactionRecord[] = [];
+		const parser = createReadStream(csvPath).pipe(
+			parse({ columns: true, skip_empty_lines: true }),
+		);
+		for await (const record of parser) {
+			records.push(record as TransactionRecord);
+		}
+		return records;
 	}
 
 	async init() {
 		dotenv.config();
-
 		await configure({
 			sinks: {
 				stdout: (record) => {
@@ -227,54 +234,40 @@ export default class SberToActual extends Command {
 				},
 			},
 			loggers: [
-				{
-					category: ["sber-actual"],
-					lowestLevel: "info",
-					sinks: ["stdout"],
-				},
-				{
-					category: ["logtape"],
-					lowestLevel: "warning",
-					sinks: ["stdout"],
-				},
+				{ category: ["sber-actual"], lowestLevel: "info", sinks: ["stdout"] },
+				{ category: ["logtape"], lowestLevel: "warning", sinks: ["stdout"] },
 			],
 		});
-
-		// Silence console.log from libraries
-		console.log = () => {};
-		console.info = () => {};
-		console.warn = () => {};
+		console.log = console.info = console.warn = () => {};
 	}
 
 	async run() {
-		// Bypass self-signed certificate issues if configured
 		if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
 			process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 		}
 
 		try {
 			const { flags } = await this.parse(SberToActual);
-
-			const actualDataDir = this.getPath("actual-data");
-			await fs.mkdir(actualDataDir, { recursive: true });
+			await fs.mkdir(this.getPath("actual-data"), { recursive: true });
 
 			if (flags.mode === "list") {
 				await this.list();
 				return;
 			}
 
+			let records: TransactionRecord[] | undefined;
+
 			if (flags.mode === "convert" || flags.mode === "all") {
-				await this.convert();
+				records = await this.convert();
 			}
 			if (flags.mode === "setup" || flags.mode === "all") {
-				await this.setup();
+				await this.setup(records);
 			}
 			if (flags.mode === "upload" || flags.mode === "all") {
-				await this.upload();
+				await this.upload(records);
 			}
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
-			// Use process.stderr directly if LogTape is failed or dispose called
 			process.stderr.write(`❌ error sber-actual Error: ${message}\n`);
 			process.exit(1);
 		} finally {
