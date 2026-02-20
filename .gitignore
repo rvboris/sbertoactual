@@ -1,1 +1,7 @@
 node_modules
+dist
+.env
+data/
+.gemini
+.serena
+.taskmaster
