@@ -47,7 +47,7 @@
   },
   "homepage": "https://github.com/rvboris/sbertoactual#readme",
   "author": "rvboris",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@actual-app/api": "^26.2.0",
