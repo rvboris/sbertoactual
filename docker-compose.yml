@@ -2,9 +2,6 @@ services:
   sbertoactual:
     image: ghcr.io/rvboris/sbertoactual:latest
     container_name: sbertoactual
-    build:
-      context: .
-      dockerfile: Dockerfile
     ports:
       - "${PORT:-3000}:3000"
     volumes:
