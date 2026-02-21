@@ -1,0 +1,17 @@
+node_modules
+dist
+coverage
+data
+actual-data
+.env
+.git
+.github
+test
+tsconfig.json
+tsconfig.test.json
+biome.json
+Dockerfile
+.dockerignore
+.gemini
+*.log
+src

@@ -1,14 +1,21 @@
 {
-  "name": "sbertoactual",
+  "name": "@rvboris/sbertoactual",
   "version": "1.0.0",
-  "description": "",
+  "description": "Автоматизация импорта выписок Сбербанка в Actual Budget",
   "main": "dist/index.js",
   "bin": {
     "sber-actual": "./bin/run"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "tsx src/index.ts",
     "build": "npm run type-check && tsc",
+    "prepublishOnly": "npm run build",
     "convert": "tsx src/index.ts --mode=convert",
     "setup": "tsx src/index.ts --mode=setup",
     "upload": "tsx src/index.ts --mode=upload",
@@ -21,8 +28,25 @@
     "format": "biome format --write .",
     "check": "biome check --write ."
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "sberbank",
+    "actual-budget",
+    "budgeting",
+    "import",
+    "finance"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rvboris/sbertoactual.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rvboris/sbertoactual/issues"
+  },
+  "homepage": "https://github.com/rvboris/sbertoactual#readme",
+  "author": "rvboris",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
