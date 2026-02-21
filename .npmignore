@@ -15,3 +15,5 @@ Dockerfile
 .gemini
 *.log
 src
+docker-compose.yml
+.env.example
