@@ -7,6 +7,9 @@ on:
 jobs:
   publish-npm:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Обязательно для Trusted Publishing
     steps:
       - uses: actions/checkout@v4
       
@@ -27,6 +30,6 @@ jobs:
         run: pnpm run build
         
       - name: Publish to npm
-        run: pnpm publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # При использовании Trusted Publishing нам НЕ нужен NPM_TOKEN в env
+        # Флаг --provenance создает цепочку доверия (SLSA)
+        run: pnpm publish --no-git-checks --provenance --access public
