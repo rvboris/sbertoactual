@@ -1,44 +1,49 @@
 {
-	"name": "sbertoactual",
-	"version": "1.0.0",
-	"description": "",
-	"main": "dist/index.js",
-	"bin": {
-		"sber-actual": "./bin/run"
-	},
-	"scripts": {
-		"start": "tsx src/index.ts",
-		"build": "npm run type-check && tsc",
-		"convert": "tsx src/index.ts --mode=convert",
-		"setup": "tsx src/index.ts --mode=setup",
-		"upload": "tsx src/index.ts --mode=upload",
-		"list": "tsx src/index.ts --mode=list",
-		"type-check": "tsc --project tsconfig.test.json",
-		"test": "npm run type-check && vitest run",
-		"coverage": "vitest run --coverage",
-		"lint": "biome lint .",
-		"format": "biome format --write .",
-		"check": "biome check --write ."
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"type": "commonjs",
-	"dependencies": {
-		"@actual-app/api": "^26.2.0",
-		"@logtape/logtape": "^2.0.2",
-		"@logtape/pretty": "^2.0.2",
-		"@oclif/core": "^4.8.0",
-		"csv-parse": "^6.1.0",
-		"dotenv": "^17.3.1"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.4.3",
-		"@types/csv-parse": "^1.1.12",
-		"@types/node": "^25.3.0",
-		"@vitest/coverage-v8": "^4.0.18",
-		"tsx": "^4.21.0",
-		"typescript": "^5.9.3",
-		"vitest": "^4.0.18"
-	}
+  "name": "sbertoactual",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "bin": {
+    "sber-actual": "./bin/run"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "npm run type-check && tsc",
+    "convert": "tsx src/index.ts --mode=convert",
+    "setup": "tsx src/index.ts --mode=setup",
+    "upload": "tsx src/index.ts --mode=upload",
+    "list": "tsx src/index.ts --mode=list",
+    "server": "tsx src/server.ts",
+    "type-check": "tsc --project tsconfig.test.json",
+    "test": "npm run type-check && vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check --write ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@actual-app/api": "^26.2.0",
+    "@logtape/logtape": "^2.0.2",
+    "@logtape/pretty": "^2.0.2",
+    "@oclif/core": "^4.8.0",
+    "csv-parse": "^6.1.0",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
+    "fastify": "^5.7.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.3",
+    "@fastify/multipart": "^9.4.0",
+    "@types/node": "^25.3.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "form-data": "^4.0.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "packageManager": "pnpm@10.30.1+sha512.3590e550d5384caa39bd5c7c739f72270234b2f6059e13018f975c313b1eb9fefcc09714048765d4d9efe961382c312e624572c0420762bdc5d5940cdf9be73a"
 }

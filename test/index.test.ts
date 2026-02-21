@@ -1,11 +1,17 @@
-import * as fsPromises from "node:fs/promises";
 import * as fs from "node:fs";
-import { Readable } from "node:stream";
+import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
+import { Readable } from "node:stream";
 import * as api from "@actual-app/api";
-import { configure, getLogger } from "@logtape/logtape";
+import { configure } from "@logtape/logtape";
+import { Config } from "@oclif/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SberToActual from "../src/index";
+
+// Minimal types for mocking to avoid 'any'
+type MockAccount = { id: string; name: string };
+type MockCategoryGroup = { id: string; name: string };
+type MockCategory = { id: string; name: string };
 
 vi.mock("node:fs/promises");
 vi.mock("node:fs");
@@ -43,18 +49,19 @@ describe("SberToActual", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Use as any to avoid complex oclif Config types in tests
-		command = new SberToActual([], {} as any);
+
+		command = new SberToActual([], {} as Config);
 		command.log = vi.fn();
+
 		command.error = vi.fn((msg) => {
 			throw new Error(msg);
-		}) as any;
+		});
 	});
 
 	describe("init", () => {
 		it("should configure logtape and dotenv", async () => {
 			const configureSpy = vi.mocked(configure);
-			
+
 			await command.init();
 
 			expect(configureSpy).toHaveBeenCalled();
@@ -90,7 +97,7 @@ describe("SberToActual", () => {
 				"20.02.2026 12:00:00;1234;AUTH123;PAYEE_NAME;CATEGORY_NAME;100.50\n";
 			const header = "Дата;Карта;Код авторизации;Описание;Категория;Сумма\n";
 			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(header + mockInput) as any,
+				() => stringToStream(header + mockInput) as unknown as fs.ReadStream,
 			);
 			const writeFileSpy = vi
 				.spyOn(fsPromises, "writeFile")
@@ -101,7 +108,7 @@ describe("SberToActual", () => {
 			expect(writeFileSpy).toHaveBeenCalled();
 			expect(records.length).toBe(1);
 			expect(records[0]).toEqual({
-				Date: "20.02.2026",
+				Date: "2026-02-20",
 				Payee: "PAYEE_NAME",
 				Category: "CATEGORY_NAME",
 				Notes: "AuthCode: AUTH123",
@@ -109,13 +116,49 @@ describe("SberToActual", () => {
 			});
 		});
 
+		it("should handle PDF files by calling convertPdf first", async () => {
+			process.env.INPUT_FILE = "test.pdf";
+			const mockRecords = [
+				{
+					Date: "2026-02-20",
+					Payee: "PDF_PAYEE",
+					Category: "CAT",
+					Notes: "Notes",
+					Amount: "200.00",
+				},
+			];
+
+			// Mock processor methods
+			const convertPdfSpy = vi
+				.spyOn((command as any).processor, "convertPdf")
+				.mockResolvedValue("data/test.csv");
+			const convertSpy = vi
+				.spyOn((command as any).processor, "convert")
+				.mockResolvedValue(mockRecords);
+
+			const writeFileSpy = vi
+				.spyOn(fsPromises, "writeFile")
+				.mockImplementation(() => Promise.resolve());
+
+			const records = await command.convert();
+
+			expect(convertPdfSpy).toHaveBeenCalledWith(expect.stringContaining("test.pdf"));
+			expect(convertSpy).toHaveBeenCalledWith("data/test.csv");
+			expect(writeFileSpy).toHaveBeenCalled();
+			expect(records).toEqual(mockRecords);
+
+			// Cleanup
+			delete process.env.INPUT_FILE;
+		});
+
 		it("should handle empty lines and skip invalid ones", async () => {
 			const mockInput =
 				"\n\n20.02.2026 12:00:00;1234;AUTH123;PAYEE_NAME;CATEGORY_NAME;100.50\nincomplete;line\n";
 			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(`Header\n${mockInput}`) as any,
+				() =>
+					stringToStream(`Header\n${mockInput}`) as unknown as fs.ReadStream,
 			);
-			const writeFileSpy = vi
+			const _writeFileSpy = vi
 				.spyOn(fsPromises, "writeFile")
 				.mockImplementation(() => Promise.resolve());
 
@@ -130,13 +173,14 @@ describe("SberToActual", () => {
 			const mockCsv =
 				'Date,Payee,Category,Notes,Amount\n"20.02.2026","Payee","New Category","",100.50';
 			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(mockCsv) as any,
+				() => stringToStream(mockCsv) as unknown as fs.ReadStream,
 			);
 
 			vi.spyOn(api, "getCategoryGroups").mockResolvedValue([]);
 			vi.spyOn(api, "createCategoryGroup").mockResolvedValue("group-id");
 			vi.spyOn(api, "getCategories").mockResolvedValue([]);
-			vi.spyOn(api, "createCategory").mockResolvedValue("cat-id" as any);
+
+			vi.spyOn(api, "createCategory").mockResolvedValue("cat-id");
 
 			await command.setup();
 
@@ -153,14 +197,20 @@ describe("SberToActual", () => {
 			const mockCsv =
 				'Date,Payee,Category,Notes,Amount\n"20.02.2026","Payee","Existing Category","",100.50';
 			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(mockCsv) as any,
+				() => stringToStream(mockCsv) as unknown as fs.ReadStream,
 			);
 
 			vi.spyOn(api, "getCategoryGroups").mockResolvedValue([
-				{ id: "group-id", name: "Импорт из Сбера" } as any,
+				{
+					id: "group-id",
+					name: "Импорт из Сбера",
+				} as unknown as MockCategoryGroup as never,
 			]);
 			vi.spyOn(api, "getCategories").mockResolvedValue([
-				{ id: "cat-id", name: "Existing Category" } as any,
+				{
+					id: "cat-id",
+					name: "Existing Category",
+				} as unknown as MockCategory as never,
 			]);
 
 			await command.setup();
@@ -176,18 +226,19 @@ describe("SberToActual", () => {
 			const mockCsv =
 				'Date,Payee,Category,Notes,Amount\n"20.02.2026","Payee","Cat","AuthCode: 123",100.50';
 			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(mockCsv) as any,
+				() => stringToStream(mockCsv) as unknown as fs.ReadStream,
 			);
 
 			vi.spyOn(api, "getAccounts").mockResolvedValue([
-				{ id: "acc-id", name: "Sber" } as any,
+				{ id: "acc-id", name: "Sber" } as unknown as MockAccount as never,
 			]);
 			vi.spyOn(api, "getCategories").mockResolvedValue([
-				{ id: "cat-id", name: "Cat" } as any,
+				{ id: "cat-id", name: "Cat" } as unknown as MockCategory as never,
 			]);
+
 			vi.spyOn(api, "importTransactions").mockResolvedValue({
 				status: "ok",
-			} as any);
+			});
 
 			await command.upload();
 
@@ -208,7 +259,7 @@ describe("SberToActual", () => {
 		it("should throw error if account not found", async () => {
 			process.env.ACTUAL_ACCOUNT_ID = "wrong-id";
 			vi.spyOn(api, "getAccounts").mockResolvedValue([
-				{ id: "acc-id", name: "Sber" } as any,
+				{ id: "acc-id", name: "Sber" } as unknown as MockAccount as never,
 			]);
 
 			await expect(command.upload()).rejects.toThrow();
@@ -219,26 +270,33 @@ describe("SberToActual", () => {
 			const mockCsv =
 				'Date,Payee,Category,Notes,Amount\n"20.02.2026","Payee","Cat","Notes",100.50';
 			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(mockCsv) as any,
+				() => stringToStream(mockCsv) as unknown as fs.ReadStream,
 			);
 
 			vi.spyOn(api, "getAccounts").mockResolvedValue([
-				{ id: "acc-id", name: "Sber" } as any,
+				{ id: "acc-id", name: "Sber" } as unknown as MockAccount as never,
 			]);
 			vi.spyOn(api, "getCategories").mockResolvedValue([
-				{ id: "cat-id", name: "Cat" } as any,
+				{ id: "cat-id", name: "Cat" } as unknown as MockCategory as never,
 			]);
 			const importSpy = vi
 				.spyOn(api, "importTransactions")
-				.mockResolvedValue({ status: "ok" } as any);
+
+				.mockResolvedValue({ status: "ok" });
 
 			await command.upload();
 
-			const transactions = importSpy.mock.calls[0][1] as any[];
+			const transactions = importSpy.mock.calls[0][1] as unknown as {
+				imported_id: string;
+			}[];
 			const id1 = transactions[0].imported_id;
 
 			await command.upload();
-			const id2 = (importSpy.mock.calls[1][1] as any[])[0].imported_id;
+			const id2 = (
+				importSpy.mock.calls[1][1] as unknown as {
+					imported_id: string;
+				}[]
+			)[0].imported_id;
 
 			expect(id1).toBe(id2);
 			expect(id1).toBe(
@@ -252,8 +310,8 @@ describe("SberToActual", () => {
 	describe("list", () => {
 		it("should list available accounts with names and IDs", async () => {
 			vi.spyOn(api, "getAccounts").mockResolvedValue([
-				{ id: "acc-1", name: "Checking" } as any,
-				{ id: "acc-2", name: "Savings" } as any,
+				{ id: "acc-1", name: "Checking" } as unknown as MockAccount as never,
+				{ id: "acc-2", name: "Savings" } as unknown as MockAccount as never,
 			]);
 
 			await command.list();
@@ -287,9 +345,14 @@ describe("SberToActual", () => {
 	describe("run", () => {
 		it("should call list when mode is list", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+
 			vi.spyOn(command as any, "parse").mockResolvedValue({
 				flags: { mode: "list" },
-			});
+				args: {},
+				argv: [],
+				raw: [],
+				metadata: { flags: {} },
+			} as any);
 			const listSpy = vi.spyOn(command, "list").mockResolvedValue(undefined);
 
 			await command.run();
@@ -299,12 +362,19 @@ describe("SberToActual", () => {
 
 		it("should call all methods when mode is all", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+
 			vi.spyOn(command as any, "parse").mockResolvedValue({
 				flags: { mode: "all" },
-			});
+				args: {},
+				argv: [],
+				raw: [],
+				metadata: { flags: {} },
+			} as any);
 			const convertSpy = vi.spyOn(command, "convert").mockResolvedValue([]);
 			const setupSpy = vi.spyOn(command, "setup").mockResolvedValue(undefined);
-			const uploadSpy = vi.spyOn(command, "upload").mockResolvedValue(undefined);
+			const uploadSpy = vi
+				.spyOn(command, "upload")
+				.mockResolvedValue(undefined);
 
 			await command.run();
 
@@ -315,12 +385,19 @@ describe("SberToActual", () => {
 
 		it("should only call convert when mode is convert", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+
 			vi.spyOn(command as any, "parse").mockResolvedValue({
 				flags: { mode: "convert" },
-			});
+				args: {},
+				argv: [],
+				raw: [],
+				metadata: { flags: {} },
+			} as any);
 			const convertSpy = vi.spyOn(command, "convert").mockResolvedValue([]);
 			const setupSpy = vi.spyOn(command, "setup").mockResolvedValue(undefined);
-			const uploadSpy = vi.spyOn(command, "upload").mockResolvedValue(undefined);
+			const uploadSpy = vi
+				.spyOn(command, "upload")
+				.mockResolvedValue(undefined);
 
 			await command.run();
 
@@ -329,8 +406,45 @@ describe("SberToActual", () => {
 			expect(uploadSpy).not.toHaveBeenCalled();
 		});
 
+		it("should call setup when mode is setup", async () => {
+			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+
+			vi.spyOn(command as any, "parse").mockResolvedValue({
+				flags: { mode: "setup" },
+				args: {},
+				argv: [],
+				raw: [],
+				metadata: { flags: {} },
+			} as any);
+			const setupSpy = vi.spyOn(command, "setup").mockResolvedValue(undefined);
+
+			await command.run();
+
+			expect(setupSpy).toHaveBeenCalled();
+		});
+
+		it("should call upload when mode is upload", async () => {
+			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+
+			vi.spyOn(command as any, "parse").mockResolvedValue({
+				flags: { mode: "upload" },
+				args: {},
+				argv: [],
+				raw: [],
+				metadata: { flags: {} },
+			} as any);
+			const uploadSpy = vi
+				.spyOn(command, "upload")
+				.mockResolvedValue(undefined);
+
+			await command.run();
+
+			expect(uploadSpy).toHaveBeenCalled();
+		});
+
 		it("should log error on failure", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+
 			vi.spyOn(command as any, "parse").mockRejectedValue(new Error("Test error"));
 			const exitSpy = vi
 				.spyOn(process, "exit")
