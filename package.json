@@ -57,11 +57,11 @@
     "csv-parse": "^6.1.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
-    "fastify": "^5.7.4"
+    "fastify": "^5.7.4",
+    "@fastify/multipart": "^9.4.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.3",
-    "@fastify/multipart": "^9.4.0",
     "@types/node": "^25.3.0",
     "@vitest/coverage-v8": "^4.0.18",
     "form-data": "^4.0.5",
