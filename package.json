@@ -1,6 +1,6 @@
 {
   "name": "@rvboris/sbertoactual",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Автоматизация импорта выписок Сбербанка в Actual Budget",
   "main": "dist/index.js",
   "bin": {
