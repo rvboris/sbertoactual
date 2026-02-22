@@ -28,20 +28,21 @@ RUN apk add --no-cache git curl
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install Sberbank2Excel tool globally using uv
-RUN uv tool install git+https://github.com/Ev2geny/Sberbank2Excel.git
-
-# Copy built application and production dependencies
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile
-
 # Create data directory and set permissions
 # In nikolaik images, 'pn' is the standard non-root user
 RUN mkdir -p /app/data && chown -R pn:pn /app
 
-# Ensure uv tools are in PATH for the non-root user
-ENV PATH="/root/.local/bin:${PATH}"
+# Switch to non-root user early to install tools in their home
+USER pn
+ENV PATH="/home/pn/.local/bin:${PATH}"
+
+# Install Sberbank2Excel tool as the 'pn' user
+RUN uv tool install git+https://github.com/Ev2geny/Sberbank2Excel.git
+
+# Copy built application and production dependencies
+COPY --from=builder --chown=pn:pn /app/dist ./dist
+COPY --from=builder --chown=pn:pn /app/package.json /app/pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile
 
 # Environment variables
 ENV NODE_ENV=production
@@ -49,9 +50,6 @@ ENV PORT=3000
 ENV ACTUAL_GROUP_NAME="Импорт из Сбера"
 
 EXPOSE 3000
-
-# Switch to non-root user
-USER pn
 
 # Start the server
 CMD ["node", "dist/server.js"]
