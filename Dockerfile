@@ -9,6 +9,9 @@ RUN apk add --no-cache python3 make g++
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
 
+# Allow build scripts for native modules (required for better-sqlite3 in pnpm v10+)
+RUN pnpm config set only-allow-defined-builds false
+
 # Install dependencies for build
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -24,6 +27,9 @@ WORKDIR /app
 
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
+
+# Allow build scripts for native modules (required for better-sqlite3 in pnpm v10+)
+RUN pnpm config set only-allow-defined-builds false
 
 # Install system dependencies
 RUN apk add --no-cache git curl build-base python3
