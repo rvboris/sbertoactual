@@ -1,27 +1,29 @@
+[🇷🇺 Русский](README.ru.md) | [🇬🇧 English](README.md)
+
 # sbertoactual
 
-Автоматизация импорта выписок Сбербанка (дебетовые и кредитные карты) в [Actual Budget](https://actualbudget.org/).
+Automating the import of Sberbank statements (debit and credit cards) into [Actual Budget](https://actualbudget.org/).
 
-## Особенности
+## Features
 
-- **Поддержка форматов:** Прямой импорт CSV и PDF выписок (использует [Sberbank2Excel](https://github.com/Ev2geny/Sberbank2Excel)).
-- **Автоматизация категорий:** Автоматическое создание групп и категорий в Actual Budget на основе данных из выписки.
-- **Дедупликация:** Каждая транзакция получает уникальный `imported_id` (на основе даты, суммы и описания), что предотвращает повторный импорт одних и тех же данных.
-- **Два режима работы:** Гибкий CLI для локального использования и REST API сервер для интеграций.
+- **Format Support:** Direct import of CSV and PDF statements (uses [Sberbank2Excel](https://github.com/Ev2geny/Sberbank2Excel)).
+- **Category Automation:** Automatic creation of groups and categories in Actual Budget based on statement data.
+- **Deduplication:** Each transaction gets a unique `imported_id` (based on date, amount, and description), preventing the re-import of the same data.
+- **Two Operation Modes:** Flexible CLI for local use and a REST API server for integrations.
 
-## Быстрый старт (Docker)
+## Quick Start (Docker)
 
-Это рекомендуемый способ запуска, так как он включает все необходимые зависимости (Node.js, Python, uv).
+This is the recommended way to run the application, as it includes all necessary dependencies (Node.js, Python, uv).
 
-### Docker Compose (рекомендуется)
-1. Создайте файл `.env` на основе примера в разделе "Конфигурация".
-2. Запустите сервис:
+### Docker Compose (Recommended)
+1. Create a `.env` file based on the example in the "Configuration" section.
+2. Start the service:
 ```bash
 docker compose up -d
 ```
 
 ### Docker CLI
-Если вы предпочитаете обычный запуск:
+If you prefer running it manually:
 ```bash
 docker build -t sbertoactual .
 docker run -d \
@@ -32,80 +34,80 @@ docker run -d \
   sbertoactual
 ```
 
-## Локальная установка
+## Local Installation
 
-### Требования
-- **Node.js:** v20+
-- **pnpm:** Рекомендуется (через Corepack)
-- **Python 3:** Для обработки PDF через [uv](https://docs.astral.sh/uv/)
+### Requirements
+- **Node.js:** v24+ (matching `.nvmrc`)
+- **pnpm:** Recommended (via Corepack)
+- **Python 3:** Required for PDF processing via [uv](https://docs.astral.sh/uv/)
 
-### Установка зависимостей
-1. Установите Node.js пакеты:
+### Installing Dependencies
+1. Install Node.js packages:
    ```bash
    pnpm install
    ```
-2. Установите инструмент конвертации PDF:
+2. Install the PDF conversion tool:
    ```bash
    uv tool install git+https://github.com/Ev2geny/Sberbank2Excel.git
    ```
 
-## Конфигурация (.env)
+## Configuration (.env)
 
-| Переменная | Описание |
+| Variable | Description |
 | :--- | :--- |
-| `ACTUAL_SERVER_URL` | URL вашего сервера Actual Budget |
-| `ACTUAL_SERVER_PASSWORD` | Пароль пользователя |
-| `ACTUAL_SYNC_ID` | Sync ID вашего бюджета |
-| `ACTUAL_BUDGET_PASSWORD` | Пароль шифрования бюджета (если установлен) |
-| `ACTUAL_ACCOUNT_ID` | ID счета в Actual Budget, куда пойдут транзакции |
-| `ACTUAL_GROUP_NAME` | Имя группы категорий. По умолчанию: "Импорт из Сбера" |
-| `PORT` | Порт сервера. По умолчанию: `3000` |
+| `ACTUAL_SERVER_URL` | URL of your Actual Budget server |
+| `ACTUAL_SERVER_PASSWORD` | User password |
+| `ACTUAL_SYNC_ID` | Your budget's Sync ID |
+| `ACTUAL_BUDGET_PASSWORD` | Budget encryption password (if set) |
+| `ACTUAL_ACCOUNT_ID` | Account ID in Actual Budget where transactions will be imported |
+| `ACTUAL_GROUP_NAME` | Name of the category group. Default: "Импорт из Сбера" |
+| `PORT` | Server port. Default: `3000` |
 
-## Использование
+## Usage
 
-### Режим командной строки (CLI)
-Положите файл выписки в папку `data/` и выполните команду с нужным режимом.
+### Command Line Interface (CLI) Mode
+Place your statement file in the `data/` folder and run the command with the desired mode.
 
-Доступные режимы `--mode`:
+Available `--mode` options:
 
-- **`all` (по умолчанию)**: Полный цикл импорта. Выполняет последовательно `convert`, `setup` и `upload`. Самый удобный способ для регулярного импорта.
-- **`convert`**: Только обработка входного файла (`PDF` или `CSV`). Извлекает транзакции и сохраняет их во временный JSON-файл для последующей обработки.
-- **`setup`**: Проверка и создание категорий. Сканирует обработанные транзакции и автоматически создает недостающие категории в Actual Budget, чтобы избежать ошибок при загрузке.
-- **`upload`**: Только загрузка данных. Отправляет транзакции на сервер Actual Budget. Благодаря дедупликации по `imported_id`, вы можете запускать этот режим повторно без риска дублей.
-- **`list`**: Служебный режим. Выводит список всех счетов из вашего Actual Budget с их ID (помогает найти нужный `ACTUAL_ACCOUNT_ID` для конфига).
+- **`all` (default)**: Full import cycle. Sequentially runs `convert`, `setup`, and `upload`. The most convenient way for regular imports.
+- **`convert`**: Only processes the input file (`PDF` or `CSV`). Extracts transactions and saves them to a temporary JSON file for later processing.
+- **`setup`**: Checks and creates categories. Scans processed transactions and automatically creates missing categories in Actual Budget to prevent upload errors.
+- **`upload`**: Uploads data only. Sends transactions to the Actual Budget server. Thanks to deduplication via `imported_id`, you can run this mode repeatedly without risking duplicates.
+- **`list`**: Utility mode. Lists all accounts from your Actual Budget with their IDs (helps find the correct `ACTUAL_ACCOUNT_ID` for config).
 
-Пример запуска через `pnpm`:
+Example run via `pnpm`:
 ```bash
-# Импорт файла
+# Import a file
 env INPUT_FILE="my_statement.pdf" pnpm start -- --mode=all
 ```
 
-Или через установленный глобально пакет:
+Or using the globally installed package:
 ```bash
 sber-actual --mode=list
 ```
 
-### Режим сервера (API)
-Запустите сервер для автоматизации загрузки через HTTP:
+### Server (API) Mode
+Start the server to automate uploads via HTTP:
 ```bash
 pnpm run server
 ```
 
-Отправьте файл выписки через `curl`:
+Send a statement file using `curl`:
 ```bash
-# Для PDF
+# For PDF
 curl -X POST -F "file=@statement.pdf" http://localhost:3000/upload
 
-# Для CSV
+# For CSV
 curl -X POST -F "file=@statement.csv" http://localhost:3000/upload
 ```
 
-## Разработка и тестирование
+## Development and Testing
 
-- **Проверка типов:** `pnpm run type-check`
-- **Запуск тестов:** `pnpm test`
-- **Линтинг:** `pnpm run lint`
+- **Type checking:** `pnpm run type-check`
+- **Run tests:** `pnpm test`
+- **Linting:** `pnpm run lint`
 
-## Лицензия
+## License
 
-Проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
