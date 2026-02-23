@@ -354,7 +354,7 @@ describe("SberToActual", () => {
 				argv: [],
 				raw: [],
 				metadata: { flags: {} },
-			} as unknown as Awaited<ReturnType<typeof command.parse>>);
+			} as unknown);
 			const listSpy = vi.spyOn(command, "list").mockResolvedValue(undefined);
 
 			await command.run();
@@ -371,7 +371,7 @@ describe("SberToActual", () => {
 				argv: [],
 				raw: [],
 				metadata: { flags: {} },
-			} as unknown as Awaited<ReturnType<typeof command.parse>>);
+			} as unknown);
 			const convertSpy = vi.spyOn(command, "convert").mockResolvedValue([]);
 			const setupSpy = vi.spyOn(command, "setup").mockResolvedValue(undefined);
 			const uploadSpy = vi
@@ -394,7 +394,7 @@ describe("SberToActual", () => {
 				argv: [],
 				raw: [],
 				metadata: { flags: {} },
-			} as unknown as Awaited<ReturnType<typeof command.parse>>);
+			} as unknown);
 			const convertSpy = vi.spyOn(command, "convert").mockResolvedValue([]);
 			const setupSpy = vi.spyOn(command, "setup").mockResolvedValue(undefined);
 			const uploadSpy = vi
@@ -417,7 +417,7 @@ describe("SberToActual", () => {
 				argv: [],
 				raw: [],
 				metadata: { flags: {} },
-			} as unknown as Awaited<ReturnType<typeof command.parse>>);
+			} as unknown);
 			const setupSpy = vi.spyOn(command, "setup").mockResolvedValue(undefined);
 
 			await command.run();
@@ -434,7 +434,7 @@ describe("SberToActual", () => {
 				argv: [],
 				raw: [],
 				metadata: { flags: {} },
-			} as unknown as Awaited<ReturnType<typeof command.parse>>);
+			} as unknown);
 			const uploadSpy = vi
 				.spyOn(command, "upload")
 				.mockResolvedValue(undefined);
