@@ -20,6 +20,8 @@ concurrency:
 jobs:
   test:
     uses: ./.github/workflows/test.yml
+    permissions:
+      pull-requests: write
 
   build:
     needs: test
