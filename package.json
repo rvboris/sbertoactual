@@ -24,7 +24,7 @@
     "server": "tsx src/server.ts",
     "type-check": "tsc --project tsconfig.test.json",
     "test": "npm run type-check && vitest run",
-    "coverage": "npm run type-check && vitest run --coverage.reporter=text --coverage.reporter=json-summary --coverage.reporter=json",
+    "coverage": "npm run type-check && vitest run --coverage",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write ."
