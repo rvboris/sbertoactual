@@ -80,13 +80,12 @@ describe("Server", () => {
 		const uploadSpy = vi.fn().mockResolvedValue(undefined);
 
 		vi.mocked(ActualProcessor).mockImplementation(
-			() =>
-				({
-					convertPdf: convertPdfSpy,
-					convert: convertSpy,
-					setup: setupSpy,
-					upload: uploadSpy,
-				}) as unknown as ActualProcessor,
+			class {
+				convertPdf = convertPdfSpy;
+				convert = convertSpy;
+				setup = setupSpy;
+				upload = uploadSpy;
+			} as unknown as typeof ActualProcessor,
 		);
 
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -131,13 +130,12 @@ describe("Server", () => {
 		const initApiSpy = vi.fn().mockResolvedValue(undefined);
 
 		vi.mocked(ActualProcessor).mockImplementation(
-			() =>
-				({
-					convert: convertSpy,
-					setup: setupSpy,
-					upload: uploadSpy,
-					initApi: initApiSpy,
-				}) as unknown as ActualProcessor,
+			class {
+				convert = convertSpy;
+				setup = setupSpy;
+				upload = uploadSpy;
+				initApi = initApiSpy;
+			} as unknown as typeof ActualProcessor,
 		);
 
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -170,10 +168,9 @@ describe("Server", () => {
 
 	it("should return 500 if processing fails", async () => {
 		vi.mocked(ActualProcessor).mockImplementation(
-			() =>
-				({
-					convert: vi.fn().mockRejectedValue(new Error("Processing failed")),
-				}) as unknown as ActualProcessor,
+			class {
+				convert = vi.fn().mockRejectedValue(new Error("Processing failed"));
+			} as unknown as typeof ActualProcessor,
 		);
 
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
