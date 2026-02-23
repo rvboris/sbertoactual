@@ -1,5 +1,5 @@
-import * as fs from "node:fs";
 import { exec } from "node:child_process";
+import * as fs from "node:fs";
 import { Readable } from "node:stream";
 import * as api from "@actual-app/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -63,10 +63,10 @@ describe("ActualProcessor", () => {
 
 	it("should convert PDF to CSV", async () => {
 		const mockExec = vi.mocked(exec);
-		mockExec.mockImplementation(((cmd: string, options: any, cb: any) => {
+		mockExec.mockImplementation(((_cmd: string, options: unknown, cb: unknown) => {
 			const callback = typeof options === "function" ? options : cb;
-			callback(null, { stdout: "Success", stderr: "" });
-		}) as any);
+			(callback as (err: null, res: { stdout: string; stderr: string }) => void)(null, { stdout: "Success", stderr: "" });
+		}) as unknown as typeof exec);
 
 		const result = await processor.convertPdf("test.pdf");
 		expect(result).toContain("test.csv");

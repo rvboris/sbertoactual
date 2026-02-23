@@ -80,14 +80,13 @@ describe("Server", () => {
 		const uploadSpy = vi.fn().mockResolvedValue(undefined);
 
 		vi.mocked(ActualProcessor).mockImplementation(
-			function () {
-				return {
+			() =>
+				({
 					convertPdf: convertPdfSpy,
 					convert: convertSpy,
 					setup: setupSpy,
 					upload: uploadSpy,
-				} as unknown as ActualProcessor;
-			},
+				}) as unknown as ActualProcessor,
 		);
 
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -132,14 +131,13 @@ describe("Server", () => {
 		const initApiSpy = vi.fn().mockResolvedValue(undefined);
 
 		vi.mocked(ActualProcessor).mockImplementation(
-			function () {
-				return {
+			() =>
+				({
 					convert: convertSpy,
 					setup: setupSpy,
 					upload: uploadSpy,
 					initApi: initApiSpy,
-				} as unknown as ActualProcessor;
-			},
+				}) as unknown as ActualProcessor,
 		);
 
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -172,11 +170,10 @@ describe("Server", () => {
 
 	it("should return 500 if processing fails", async () => {
 		vi.mocked(ActualProcessor).mockImplementation(
-			function () {
-				return {
+			() =>
+				({
 					convert: vi.fn().mockRejectedValue(new Error("Processing failed")),
-				} as unknown as ActualProcessor;
-			},
+				}) as unknown as ActualProcessor,
 		);
 
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
