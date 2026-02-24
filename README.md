@@ -62,6 +62,7 @@ docker run -d \
 | `ACTUAL_ACCOUNT_ID` | Account ID in Actual Budget where transactions will be imported |
 | `ACTUAL_GROUP_NAME` | Name of the category group. Default: "Импорт из Сбера" |
 | `PORT` | Server port. Default: `3000` |
+| `API_KEY` | (Optional) Secret key to protect the server. If set, requests must include `X-API-Key` header |
 
 ## Usage
 
@@ -93,13 +94,13 @@ Start the server to automate uploads via HTTP:
 pnpm run server
 ```
 
-Send a statement file using `curl`:
+Send a statement file using `curl`. If `API_KEY` is configured, include the header:
 ```bash
 # For PDF
-curl -X POST -F "file=@statement.pdf" http://localhost:3000/upload
+curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.pdf" http://localhost:3000/upload
 
 # For CSV
-curl -X POST -F "file=@statement.csv" http://localhost:3000/upload
+curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://localhost:3000/upload
 ```
 
 ## Development and Testing

@@ -62,6 +62,7 @@ docker run -d
 | `ACTUAL_ACCOUNT_ID` | ID счета в Actual Budget, куда пойдут транзакции |
 | `ACTUAL_GROUP_NAME` | Имя группы категорий. По умолчанию: "Импорт из Сбера" |
 | `PORT` | Порт сервера. По умолчанию: `3000` |
+| `API_KEY` | (Опционально) Секретный ключ для защиты сервера. Если установлен, запросы должны содержать заголовок `X-API-Key` |
 
 ## Использование
 
@@ -93,13 +94,13 @@ sber-actual --mode=list
 pnpm run server
 ```
 
-Отправьте файл выписки через `curl`:
+Отправьте файл выписки через `curl`. Если настроен `API_KEY`, добавьте заголовок:
 ```bash
 # Для PDF
-curl -X POST -F "file=@statement.pdf" http://localhost:3000/upload
+curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.pdf" http://localhost:3000/upload
 
 # Для CSV
-curl -X POST -F "file=@statement.csv" http://localhost:3000/upload
+curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://localhost:3000/upload
 ```
 
 ## Разработка и тестирование
