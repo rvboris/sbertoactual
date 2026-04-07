@@ -33,7 +33,7 @@ jobs:
         run: pnpm run coverage
 
       - name: Report Coverage
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           name: Vitest Coverage
