@@ -29,15 +29,14 @@ RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
 RUN apk add --no-cache build-base python3
 
 # Create data directory and set permissions
-RUN mkdir -p /app/data && chown -R pn:pn /app
+RUN mkdir -p /app/data && chown -R node:node /app
 
 # Switch to non-root user early
-USER pn
-ENV PATH="/home/pn/.local/bin:${PATH}"
+USER node
 
 # Copy built application and production dependencies
-COPY --from=builder --chown=pn:pn /app/dist ./dist
-COPY --from=builder --chown=pn:pn /app/package.json /app/pnpm-lock.yaml ./
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/package.json /app/pnpm-lock.yaml ./
 
 # Re-install production dependencies to ensure native modules (like better-sqlite3) 
 # are compiled for this specific Alpine/Node environment
