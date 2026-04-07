@@ -2,10 +2,10 @@ import * as fs from "node:fs/promises";
 import * as logtape from "@logtape/logtape";
 import FormData from "form-data";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ActualProcessor } from "../src/processor";
-import { server, setupLogging, start } from "../src/server";
+import { ActualProcessor } from "../src/processor.js";
+import { server, setupLogging, start } from "../src/server.js";
 
-vi.mock("../src/processor");
+vi.mock("../src/processor.js");
 vi.mock("node:fs/promises");
 vi.mock("@logtape/logtape", async (importOriginal) => {
 	const actual = await importOriginal<typeof logtape>();
@@ -74,8 +74,8 @@ describe("Server", () => {
 			},
 		];
 
-		const convertPdfSpy = vi.fn().mockResolvedValue("test.csv");
-		const convertSpy = vi.fn().mockResolvedValue(mockRecords);
+		const convertPdfSpy = vi.fn().mockResolvedValue(mockRecords);
+		const convertSpy = vi.fn().mockResolvedValue([]);
 		const setupSpy = vi.fn().mockResolvedValue(undefined);
 		const uploadSpy = vi.fn().mockResolvedValue(undefined);
 
@@ -108,7 +108,7 @@ describe("Server", () => {
 		expect(body.transactionsProcessed).toBe(1);
 
 		expect(convertPdfSpy).toHaveBeenCalled();
-		expect(convertSpy).toHaveBeenCalledWith("test.csv");
+		expect(convertSpy).not.toHaveBeenCalled();
 		expect(setupSpy).toHaveBeenCalled();
 		expect(uploadSpy).toHaveBeenCalled();
 	});

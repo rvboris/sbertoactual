@@ -6,14 +6,14 @@ Automating the import of Sberbank statements (debit and credit cards) into [Actu
 
 ## Features
 
-- **Format Support:** Direct import of CSV and PDF statements (uses [Sberbank2Excel](https://github.com/Ev2geny/Sberbank2Excel)).
+- **Format Support:** Direct import of CSV statements and PDF statements in `SBER_DEBIT_2603` format (uses [`@rvboris/sberparse`](https://www.npmjs.com/package/@rvboris/sberparse)).
 - **Category Automation:** Automatic creation of groups and categories in Actual Budget based on statement data.
 - **Deduplication:** Each transaction gets a unique `imported_id` (based on date, amount, and description), preventing the re-import of the same data.
 - **Two Operation Modes:** Flexible CLI for local use and a REST API server for integrations.
 
 ## Quick Start (Docker)
 
-This is the recommended way to run the application, as it includes all necessary dependencies (Node.js, Python, uv).
+This is the recommended way to run the application, as it includes all necessary dependencies.
 
 ### Docker Compose (Recommended)
 1. Create a `.env` file based on the example in the "Configuration" section.
@@ -39,16 +39,11 @@ docker run -d \
 ### Requirements
 - **Node.js:** v24+ (matching `.nvmrc`)
 - **pnpm:** Recommended (via Corepack)
-- **Python 3:** Required for PDF processing via [uv](https://docs.astral.sh/uv/)
 
 ### Installing Dependencies
 1. Install Node.js packages:
    ```bash
    pnpm install
-   ```
-2. Install the PDF conversion tool:
-   ```bash
-   uv tool install git+https://github.com/Ev2geny/Sberbank2Excel.git
    ```
 
 ## Configuration (.env)
@@ -72,7 +67,7 @@ Place your statement file in the `data/` folder and run the command with the des
 Available `--mode` options:
 
 - **`all` (default)**: Full import cycle. Sequentially runs `convert`, `setup`, and `upload`. The most convenient way for regular imports.
-- **`convert`**: Only processes the input file (`PDF` or `CSV`). Extracts transactions and saves them to a temporary JSON file for later processing.
+- **`convert`**: Only processes the input file (`PDF` or `CSV`). Extracts transactions and saves them to `actual_import.csv` for later processing.
 - **`setup`**: Checks and creates categories. Scans processed transactions and automatically creates missing categories in Actual Budget to prevent upload errors.
 - **`upload`**: Uploads data only. Sends transactions to the Actual Budget server. Thanks to deduplication via `imported_id`, you can run this mode repeatedly without risking duplicates.
 - **`list`**: Utility mode. Lists all accounts from your Actual Budget with their IDs (helps find the correct `ACTUAL_ACCOUNT_ID` for config).
@@ -102,6 +97,12 @@ curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.pdf" http://loc
 # For CSV
 curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://localhost:3000/upload
 ```
+
+## PDF Support
+
+- PDF parsing uses `@rvboris/sberparse`.
+- Currently only `SBER_DEBIT_2603` statements are supported.
+- CSV import behavior is unchanged.
 
 ## Development and Testing
 

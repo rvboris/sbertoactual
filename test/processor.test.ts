@@ -1,14 +1,14 @@
-import { exec } from "node:child_process";
 import * as fs from "node:fs";
 import { Readable } from "node:stream";
 import * as api from "@actual-app/api";
+import { parsePdf } from "@rvboris/sberparse";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ActualProcessor, formatDate } from "../src/processor";
+import { ActualProcessor, formatDate } from "../src/processor.js";
 
 vi.mock("@actual-app/api");
 vi.mock("node:fs");
-vi.mock("node:child_process", () => ({
-	exec: vi.fn(),
+vi.mock("@rvboris/sberparse", () => ({
+	parsePdf: vi.fn(),
 }));
 
 const stringToStream = (str: string) => {
@@ -61,24 +61,37 @@ describe("ActualProcessor", () => {
 		expect(api.downloadBudget).toHaveBeenCalled();
 	});
 
-	it("should convert PDF to CSV", async () => {
-		const mockExec = vi.mocked(exec);
-		mockExec.mockImplementation(((_cmd: string, options: unknown, cb: unknown) => {
-			const callback = typeof options === "function" ? options : cb;
-			(callback as (err: null, res: { stdout: string; stderr: string }) => void)(null, { stdout: "Success", stderr: "" });
-		}) as unknown as typeof exec);
+	it("should convert PDF records via sberparse", async () => {
+		vi.mocked(parsePdf).mockResolvedValue({
+			extractor_name: "SBER_DEBIT_2603",
+			transactions: [
+				{
+					operation_date: new Date("2026-02-20T10:00:00Z"),
+					processing_date: new Date("2026-02-21T00:00:00Z"),
+					authorisation_code: "AUTH123",
+					description: "PAYEE",
+					category: "CAT",
+					value_account_currency: 100.5,
+					remainder_account_currency: 1000,
+				},
+			],
+			period_balance: 0,
+			balance_column: "remainder_account_currency",
+			columns_info: {},
+			errors: "",
+		});
 
 		const result = await processor.convertPdf("test.pdf");
-		expect(result).toContain("test.csv");
-		expect(mockExec).toHaveBeenCalledWith(
-			expect.stringContaining("sberbank2Excel -t csv"),
-			expect.objectContaining({
-				env: expect.objectContaining({ PYTHONUTF8: "1" }),
-				encoding: "utf8",
-				timeout: 30000,
-			}),
-			expect.any(Function),
-		);
+		expect(result).toEqual([
+			{
+				Date: "2026-02-20",
+				Payee: "PAYEE",
+				Category: "CAT",
+				Notes: "AuthCode: AUTH123",
+				Amount: "100.50",
+			},
+		]);
+		expect(parsePdf).toHaveBeenCalledWith("test.pdf");
 	});
 
 	it("should convert CSV", async () => {

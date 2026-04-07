@@ -1,12 +1,13 @@
 import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { configure, dispose, getLogger } from "@logtape/logtape";
 import { prettyFormatter } from "@logtape/pretty";
 import { Command, Flags } from "@oclif/core";
 import { parse } from "csv-parse";
 import * as dotenv from "dotenv";
-import { ActualProcessor, type TransactionRecord } from "./processor";
+import { ActualProcessor, type TransactionRecord } from "./processor.js";
 
 const logger = getLogger(["sber-actual"]);
 
@@ -75,12 +76,9 @@ export default class SberToActual extends Command {
 		const inputPath = this.getPath(this.appConfig.inputFile);
 		const isPdf = inputPath.toLowerCase().endsWith(".pdf");
 
-		let csvPath = inputPath;
-		if (isPdf) {
-			csvPath = await this.processor.convertPdf(inputPath);
-		}
-
-		const records = await this.processor.convert(csvPath);
+		const records = isPdf
+			? await this.processor.convertPdf(inputPath)
+			: await this.processor.convert(inputPath);
 		const csvContent = [
 			"Date,Payee,Category,Notes,Amount",
 
@@ -133,7 +131,7 @@ export default class SberToActual extends Command {
 	}
 
 	async init(): Promise<void> {
-		dotenv.config();
+		dotenv.config({ quiet: true });
 		await configure({
 			sinks: {
 				stdout: (record) => {
@@ -183,7 +181,11 @@ export default class SberToActual extends Command {
 	}
 }
 
-if (require.main === module) {
+const isMainModule =
+	process.argv[1] !== undefined &&
+	path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
 	SberToActual.run().catch((err) => {
 		console.error("FATAL ERROR:", err);
 		process.exit(1);

@@ -9,7 +9,7 @@ describe("Server Authentication", () => {
 
 	it("should allow request when API_KEY is not set", async () => {
 		vi.stubEnv("API_KEY", "");
-		const { server } = await import("../src/server");
+		const { server } = await import("../src/server.js");
 
 		const form = new FormData();
 		const response = await server.inject({
@@ -25,7 +25,7 @@ describe("Server Authentication", () => {
 
 	it("should return 401 when API_KEY is set but header is missing", async () => {
 		vi.stubEnv("API_KEY", "secret-key");
-		const { server } = await import("../src/server");
+		const { server } = await import("../src/server.js");
 
 		const response = await server.inject({
 			method: "POST",
@@ -38,7 +38,7 @@ describe("Server Authentication", () => {
 
 	it("should return 401 when API_KEY is set but header is wrong", async () => {
 		vi.stubEnv("API_KEY", "secret-key");
-		const { server } = await import("../src/server");
+		const { server } = await import("../src/server.js");
 
 		const response = await server.inject({
 			method: "POST",
@@ -53,7 +53,7 @@ describe("Server Authentication", () => {
 
 	it("should allow request when API_KEY is set and header matches", async () => {
 		vi.stubEnv("API_KEY", "secret-key");
-		const { server } = await import("../src/server");
+		const { server } = await import("../src/server.js");
 
 		const form = new FormData();
 		const response = await server.inject({

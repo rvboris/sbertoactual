@@ -1,10 +1,10 @@
 {
 	"name": "@rvboris/sbertoactual",
-	"version": "1.0.10",
+	"version": "2.0.0",
 	"description": "Automating the import of Sberbank statements into Actual Budget",
 	"main": "dist/index.js",
 	"bin": {
-		"sber-actual": "./bin/run"
+		"sber-actual": "./bin/run.js"
 	},
 	"files": [
 		"dist",
@@ -49,17 +49,18 @@
 	"homepage": "https://github.com/rvboris/sbertoactual#readme",
 	"author": "rvboris",
 	"license": "MIT",
-	"type": "commonjs",
+	"type": "module",
 	"dependencies": {
 		"@actual-app/api": "^26.2.0",
+		"@fastify/multipart": "^9.4.0",
 		"@logtape/logtape": "^2.0.2",
 		"@logtape/pretty": "^2.0.2",
 		"@oclif/core": "^4.8.0",
+		"@rvboris/sberparse": "^1.1.2",
 		"csv-parse": "^6.1.0",
 		"date-fns": "^4.1.0",
 		"dotenv": "^17.3.1",
-		"fastify": "^5.7.4",
-		"@fastify/multipart": "^9.4.0"
+		"fastify": "^5.7.4"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.3",

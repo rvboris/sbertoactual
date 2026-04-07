@@ -1,14 +1,12 @@
-import { exec } from "node:child_process";
 import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { promisify } from "node:util";
 import * as api from "@actual-app/api";
 import { getLogger } from "@logtape/logtape";
+import { parsePdf } from "@rvboris/sberparse";
 import { parse as parseCsv } from "csv-parse";
 import { format, parse as parseDate } from "date-fns";
 
-const execAsync = promisify(exec);
 const logger = getLogger(["sber-actual", "processor"]);
 
 export function formatDate(dateStr: string): string {
@@ -75,34 +73,32 @@ export class ActualProcessor {
 		await api.downloadBudget(syncId, { password: budgetPassword });
 	}
 
-	async convertPdf(inputFilePath: string): Promise<string> {
-		const dir = path.dirname(inputFilePath);
-		const ext = path.extname(inputFilePath);
-		const base = path.basename(inputFilePath, ext);
-		const outputCsvPath = path.join(dir, `${base}.csv`);
-
-		logger.info`Converting PDF to CSV: ${inputFilePath}`;
+	async convertPdf(inputFilePath: string): Promise<TransactionRecord[]> {
+		logger.info`Parsing PDF statement: ${inputFilePath}`;
 
 		try {
-			const { stdout, stderr } = await execAsync(
-				`sberbank2Excel -t csv "${inputFilePath}"`,
-				{
-					env: { ...process.env, PYTHONUTF8: "1" },
-					encoding: "utf8",
-					timeout: 30000, // 30 seconds timeout
-				},
-			);
+			const result = await parsePdf(inputFilePath);
 
-			if (stderr) {
-				logger.warn`sberbank2Excel stderr: ${stderr}`;
+			if (result.errors) {
+				logger.warn`sberparse warnings: ${result.errors}`;
 			}
 
-			logger.info`sberbank2Excel stdout: ${stdout}`;
+			const records = result.transactions.map((transaction) => ({
+				Date: format(transaction.operation_date, "yyyy-MM-dd"),
+				Payee: transaction.description,
+				Category: transaction.category,
+				Notes: transaction.authorisation_code
+					? `AuthCode: ${transaction.authorisation_code}`
+					: "",
+				Amount: transaction.value_account_currency.toFixed(2),
+			}));
 
-			return outputCsvPath;
+			logger.info`Successfully parsed ${records.length} PDF transactions`;
+
+			return records;
 		} catch (error) {
-			logger.error`PDF conversion failed: ${error}`;
-			throw new Error(`Failed to convert PDF to CSV: ${error}`);
+			logger.error`PDF parsing failed: ${error}`;
+			throw new Error(`Failed to parse PDF statement: ${error}`);
 		}
 	}
 
@@ -216,7 +212,10 @@ export class ActualProcessor {
 
 		logger.info`Uploading ${transactions.length} transactions to "${account.name}"...`;
 
-		await api.importTransactions(accountId, transactions as unknown as Parameters<typeof api.importTransactions>[1]);
+		await api.importTransactions(
+			accountId,
+			transactions as unknown as Parameters<typeof api.importTransactions>[1],
+		);
 
 		logger.info`Import successful!`;
 

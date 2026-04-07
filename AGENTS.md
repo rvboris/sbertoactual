@@ -6,7 +6,7 @@ This project automates the process of importing Sberbank debit card statements i
 - **Runtime:** Node.js
 - **API:** `@actual-app/api` (Actual Budget API)
 - **Data Parsing:** `csv-parse`
-- **PDF Processing:** `Sberbank2Excel`
+- **PDF Processing:** `@rvboris/sberparse`
 
 ## Workflow
 
@@ -14,7 +14,7 @@ The import process follows these steps:
 
 1.  **Conversion:**
     - For **CSV**: Reads the raw Sberbank CSV file.
-    - For **PDF**: Uses `Sberbank2Excel` to convert the PDF statement into a compatible CSV format.
+    - For **PDF**: Uses `@rvboris/sberparse` to parse `SBER_DEBIT_2603` statements directly into normalized records.
     - Extracts `Date`, `Payee`, `Category`, `Notes` (includes AuthCode), and `Amount`.
 
 2.  **Category Creation:**
@@ -47,10 +47,7 @@ Install Node.js dependencies:
 pnpm install
 ```
 
-Install `Sberbank2Excel` for PDF support (requires [uv](https://docs.astral.sh/uv/)):
-```bash
-uv tool install git+https://github.com/Ev2geny/Sberbank2Excel.git
-```
+PDF support is included via the npm dependency `@rvboris/sberparse`.
 
 ### Execution Steps
 #### Server Mode

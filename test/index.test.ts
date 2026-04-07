@@ -6,7 +6,7 @@ import * as api from "@actual-app/api";
 import { configure } from "@logtape/logtape";
 import type { Config } from "@oclif/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import SberToActual from "../src/index";
+import SberToActual from "../src/index.js";
 
 // Minimal types for mocking to avoid 'any'
 type MockAccount = { id: string; name: string };
@@ -93,30 +93,40 @@ describe("SberToActual", () => {
 
 	describe("convert", () => {
 		it("should correctly parse Sberbank CSV and write Actual import CSV", async () => {
-			const mockInput =
-				"20.02.2026 12:00:00;1234;AUTH123;PAYEE_NAME;CATEGORY_NAME;100.50\n";
-			const header = "Дата;Карта;Код авторизации;Описание;Категория;Сумма\n";
-			vi.spyOn(fs, "createReadStream").mockImplementation(
-				() => stringToStream(header + mockInput) as unknown as fs.ReadStream,
-			);
+			process.env.INPUT_FILE = "test.csv";
+			const mockRecords = [
+				{
+					Date: "2026-02-20",
+					Payee: "PAYEE_NAME",
+					Category: "CATEGORY_NAME",
+					Notes: "AuthCode: AUTH123",
+					Amount: "100.50",
+				},
+			];
+			const convertSpy = vi
+				.spyOn(
+					(
+						command as unknown as {
+							processor: { convert: (file: string) => Promise<unknown[]> };
+						}
+					).processor,
+					"convert",
+				)
+				.mockResolvedValue(mockRecords);
 			const writeFileSpy = vi
 				.spyOn(fsPromises, "writeFile")
 				.mockImplementation(() => Promise.resolve());
 
 			const records = await command.convert();
 
+			expect(convertSpy).toHaveBeenCalled();
 			expect(writeFileSpy).toHaveBeenCalled();
-			expect(records.length).toBe(1);
-			expect(records[0]).toEqual({
-				Date: "2026-02-20",
-				Payee: "PAYEE_NAME",
-				Category: "CATEGORY_NAME",
-				Notes: "AuthCode: AUTH123",
-				Amount: "100.50",
-			});
+			expect(records).toEqual(mockRecords);
+
+			delete process.env.INPUT_FILE;
 		});
 
-		it("should handle PDF files by calling convertPdf first", async () => {
+		it("should handle PDF files via direct PDF conversion", async () => {
 			process.env.INPUT_FILE = "test.pdf";
 			const mockRecords = [
 				{
@@ -130,11 +140,31 @@ describe("SberToActual", () => {
 
 			// Mock processor methods
 			const convertPdfSpy = vi
-				.spyOn((command as unknown as { processor: { convertPdf: (file: string) => Promise<string>; convert: (file: string) => Promise<unknown[]> } }).processor, "convertPdf")
-				.mockResolvedValue("data/test.csv");
-			const convertSpy = vi
-				.spyOn((command as unknown as { processor: { convertPdf: (file: string) => Promise<string>; convert: (file: string) => Promise<unknown[]> } }).processor, "convert")
+				.spyOn(
+					(
+						command as unknown as {
+							processor: {
+								convertPdf: (file: string) => Promise<unknown[]>;
+								convert: (file: string) => Promise<unknown[]>;
+							};
+						}
+					).processor,
+					"convertPdf",
+				)
 				.mockResolvedValue(mockRecords);
+			const convertSpy = vi
+				.spyOn(
+					(
+						command as unknown as {
+							processor: {
+								convertPdf: (file: string) => Promise<string>;
+								convert: (file: string) => Promise<unknown[]>;
+							};
+						}
+					).processor,
+					"convert",
+				)
+				.mockResolvedValue([]);
 
 			const writeFileSpy = vi
 				.spyOn(fsPromises, "writeFile")
@@ -145,7 +175,7 @@ describe("SberToActual", () => {
 			expect(convertPdfSpy).toHaveBeenCalledWith(
 				expect.stringContaining("test.pdf"),
 			);
-			expect(convertSpy).toHaveBeenCalledWith("data/test.csv");
+			expect(convertSpy).not.toHaveBeenCalled();
 			expect(writeFileSpy).toHaveBeenCalled();
 			expect(records).toEqual(mockRecords);
 
@@ -348,7 +378,10 @@ describe("SberToActual", () => {
 		it("should call list when mode is list", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
 
-			vi.spyOn(command as unknown as { parse: () => Promise<unknown> }, "parse").mockResolvedValue({
+			vi.spyOn(
+				command as unknown as { parse: () => Promise<unknown> },
+				"parse",
+			).mockResolvedValue({
 				flags: { mode: "list" },
 				args: {},
 				argv: [],
@@ -365,7 +398,10 @@ describe("SberToActual", () => {
 		it("should call all methods when mode is all", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
 
-			vi.spyOn(command as unknown as { parse: () => Promise<unknown> }, "parse").mockResolvedValue({
+			vi.spyOn(
+				command as unknown as { parse: () => Promise<unknown> },
+				"parse",
+			).mockResolvedValue({
 				flags: { mode: "all" },
 				args: {},
 				argv: [],
@@ -388,7 +424,10 @@ describe("SberToActual", () => {
 		it("should only call convert when mode is convert", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
 
-			vi.spyOn(command as unknown as { parse: () => Promise<unknown> }, "parse").mockResolvedValue({
+			vi.spyOn(
+				command as unknown as { parse: () => Promise<unknown> },
+				"parse",
+			).mockResolvedValue({
 				flags: { mode: "convert" },
 				args: {},
 				argv: [],
@@ -411,7 +450,10 @@ describe("SberToActual", () => {
 		it("should call setup when mode is setup", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
 
-			vi.spyOn(command as unknown as { parse: () => Promise<unknown> }, "parse").mockResolvedValue({
+			vi.spyOn(
+				command as unknown as { parse: () => Promise<unknown> },
+				"parse",
+			).mockResolvedValue({
 				flags: { mode: "setup" },
 				args: {},
 				argv: [],
@@ -428,7 +470,10 @@ describe("SberToActual", () => {
 		it("should call upload when mode is upload", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
 
-			vi.spyOn(command as unknown as { parse: () => Promise<unknown> }, "parse").mockResolvedValue({
+			vi.spyOn(
+				command as unknown as { parse: () => Promise<unknown> },
+				"parse",
+			).mockResolvedValue({
 				flags: { mode: "upload" },
 				args: {},
 				argv: [],
@@ -447,9 +492,10 @@ describe("SberToActual", () => {
 		it("should log error on failure", async () => {
 			vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
 
-			vi.spyOn(command as unknown as { parse: () => Promise<unknown> }, "parse").mockRejectedValue(
-				new Error("Test error"),
-			);
+			vi.spyOn(
+				command as unknown as { parse: () => Promise<unknown> },
+				"parse",
+			).mockRejectedValue(new Error("Test error"));
 			const exitSpy = vi
 				.spyOn(process, "exit")
 				.mockImplementation(() => undefined as never);

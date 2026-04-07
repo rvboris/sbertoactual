@@ -18,7 +18,7 @@ COPY . .
 RUN pnpm run build
 
 # --- Runtime Stage ---
-FROM nikolaik/python-nodejs:python3.14-nodejs24-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -26,10 +26,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
 
 # Install system dependencies
-RUN apk add --no-cache git curl build-base python3
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN apk add --no-cache build-base python3
 
 # Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R pn:pn /app
@@ -37,9 +34,6 @@ RUN mkdir -p /app/data && chown -R pn:pn /app
 # Switch to non-root user early
 USER pn
 ENV PATH="/home/pn/.local/bin:${PATH}"
-
-# Install Sberbank2Excel tool as the 'pn' user
-RUN uv tool install git+https://github.com/Ev2geny/Sberbank2Excel.git
 
 # Copy built application and production dependencies
 COPY --from=builder --chown=pn:pn /app/dist ./dist
