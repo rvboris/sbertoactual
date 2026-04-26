@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import * as api from "@actual-app/api";
 import { configure, dispose, getLogger } from "@logtape/logtape";
-import { prettyFormatter } from "@logtape/pretty";
+import { getPrettyFormatter } from "@logtape/pretty";
 import * as dotenv from "dotenv";
 import { Hono } from "hono";
 import { timeout } from "hono/timeout";
@@ -38,15 +38,15 @@ server.use("*", async (c, next) => {
 });
 
 export async function setupLogging(): Promise<void> {
+	const formatter = getPrettyFormatter({
+		timestamp: "time",
+		categoryWidth: 0,
+	});
+
 	await configure({
 		sinks: {
 			stdout: (record) => {
-				process.stdout.write(
-					prettyFormatter(record, {
-						timestamp: "time",
-						category: null,
-					}),
-				);
+				process.stdout.write(formatter(record));
 			},
 		},
 		loggers: [
