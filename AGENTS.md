@@ -14,7 +14,7 @@ The import process follows these steps:
 
 1.  **Conversion:**
     - For **CSV**: Reads the raw Sberbank CSV file.
-    - For **PDF**: Uses `@rvboris/sberparse` to parse `SBER_DEBIT_2603` statements directly into normalized records.
+    - For **PDF**: Uses `@rvboris/sberparse` to parse statements directly into normalized records.
     - Extracts `Date`, `Payee`, `Category`, `Notes` (includes AuthCode), and `Amount`.
 
 2.  **Category Creation:**

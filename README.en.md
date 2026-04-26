@@ -6,7 +6,7 @@ Automating the import of Sberbank statements (debit and credit cards) into [Actu
 
 ## Features
 
-- **Format Support:** Direct import of CSV statements and PDF statements in `SBER_DEBIT_2603` format (uses [`@rvboris/sberparse`](https://www.npmjs.com/package/@rvboris/sberparse)).
+- **Format Support:** Direct import of CSV statements and PDF statements (uses [`@rvboris/sberparse`](https://www.npmjs.com/package/@rvboris/sberparse)).
 - **Category Automation:** Automatic creation of groups and categories in Actual Budget based on statement data.
 - **Deduplication:** Each transaction gets a unique `imported_id` (based on date, amount, and description), preventing the re-import of the same data.
 - **Two Operation Modes:** Flexible CLI for local use and a REST API server for integrations.
@@ -101,7 +101,6 @@ curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://loc
 ## PDF Support
 
 - PDF parsing uses `@rvboris/sberparse`.
-- Currently only `SBER_DEBIT_2603` statements are supported.
 - CSV import behavior is unchanged.
 
 ## Development and Testing
