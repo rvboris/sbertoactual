@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActualProcessor } from "../src/processor.js";
 import { server, setupLogging, start } from "../src/server.js";
 
-let isLogtapeConfigured = false;
+let logtapeConfig: logtape.Config<string, string> | null = null;
 
 vi.mock("@hono/node-server", () => ({
 	serve: vi.fn(),
@@ -18,16 +18,16 @@ vi.mock("@logtape/logtape", async (importOriginal) => {
 	const actual = await importOriginal<typeof logtape>();
 	return {
 		...actual,
-		configure: vi.fn(async () => {
-			isLogtapeConfigured = true;
+		configure: vi.fn(async (config: logtape.Config<string, string>) => {
+			logtapeConfig = config;
 		}),
-		getConfig: vi.fn(() => (isLogtapeConfigured ? {} : null)),
+		getConfig: vi.fn(() => logtapeConfig),
 	};
 });
 
 describe("Server", () => {
 	beforeEach(() => {
-		isLogtapeConfigured = false;
+		logtapeConfig = null;
 		vi.clearAllMocks();
 	});
 
@@ -41,6 +41,28 @@ describe("Server", () => {
 		await setupLogging();
 
 		expect(logtape.configure).toHaveBeenCalledTimes(1);
+	});
+
+	it("should replace existing foreign logging config", async () => {
+		logtapeConfig = {
+			sinks: { console: vi.fn() },
+			loggers: [{ category: ["other"], sinks: ["console"] }],
+		};
+
+		await setupLogging();
+
+		expect(logtape.configure).toHaveBeenCalledWith(
+			expect.objectContaining({ reset: true }),
+		);
+		expect(logtapeConfig?.sinks.stdout).toBeDefined();
+		expect(logtapeConfig?.loggers).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					category: ["sber-actual"],
+					sinks: ["stdout"],
+				}),
+			]),
+		);
 	});
 
 	it("should start the server", async () => {
