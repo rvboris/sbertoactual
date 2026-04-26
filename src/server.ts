@@ -43,6 +43,7 @@ export async function setupLogging(): Promise<void> {
 		// Cast to any because the current type definition incorrectly omits 'category',
 		// but the runtime supports it to hide the category name.
 		category: () => "",
+		wordWrap: false,
 	} as any);
 
 	await configure({
