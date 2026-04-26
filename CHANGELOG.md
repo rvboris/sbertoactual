@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.1.0](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v3.0.0...sbertoactual-v3.1.0) (2026-04-26)
+
+
+### Features
+
+* add timestamps to logs ([10453de](https://github.com/rvboris/sbertoactual/commit/10453deb9ca77c8179b1da8e1660f8140b638a19))
+* hide category prefix in logs ([8e489e5](https://github.com/rvboris/sbertoactual/commit/8e489e5b5c46ec89a657ae84de6aff51ecdca1fd))
+* remove category name from logs ([4e62de1](https://github.com/rvboris/sbertoactual/commit/4e62de14458747cb2b262d1bfcce828f43db8770))
+
+
+### Bug Fixes
+
+* optimize api sessions and silence verbose logs to prevent sync loops ([49a0e6b](https://github.com/rvboris/sbertoactual/commit/49a0e6bede8426fb744e2d165d51bec3c3c67ffd))
+* prevent server timeouts on large file uploads ([5268acb](https://github.com/rvboris/sbertoactual/commit/5268acbb80925b789436596aa1a0f97483dcc841))
+
 ## [3.0.0](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v2.1.0...sbertoactual-v3.0.0) (2026-04-26)
 
 
