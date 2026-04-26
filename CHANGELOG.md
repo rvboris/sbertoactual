@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.1](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.0...sbertoactual-v4.0.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* make LogTape setup idempotent ([05fe0e0](https://github.com/rvboris/sbertoactual/commit/05fe0e07c00ae4176484b85788a88417eff354dc))
+
 ## [4.0.0](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v3.2.1...sbertoactual-v4.0.0) (2026-04-26)
 
 
