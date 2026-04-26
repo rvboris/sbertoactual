@@ -4,11 +4,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import * as api from "@actual-app/api";
-import { configure, dispose, getLogger } from "@logtape/logtape";
-import { getPrettyFormatter } from "@logtape/pretty";
+import { dispose, getLogger } from "@logtape/logtape";
 import * as dotenv from "dotenv";
 import { Hono } from "hono";
 import { timeout } from "hono/timeout";
+import { setupLogging } from "./logging.js";
 import { ActualProcessor, type ProcessorConfig } from "./processor.js";
 
 dotenv.config({ quiet: true });
@@ -37,28 +37,7 @@ server.use("*", async (c, next) => {
 	logger.info`Response sent: ${method} ${requestPath} - Status: ${c.res.status} - Time: ${(performance.now() - startTime).toFixed(2)}ms`;
 });
 
-export async function setupLogging(): Promise<void> {
-	const formatter = getPrettyFormatter({
-		timestamp: "time",
-		// Cast to any because the current type definition incorrectly omits 'category',
-		// but the runtime supports it to hide the category name.
-		category: () => "",
-		wordWrap: false,
-	} as any);
-
-	await configure({
-		sinks: {
-			stdout: (record) => {
-				process.stdout.write(formatter(record));
-			},
-		},
-		loggers: [
-			{ category: ["sber-actual"], lowestLevel: "info", sinks: ["stdout"] },
-			{ category: ["logtape"], lowestLevel: "warning", sinks: ["stdout"] },
-		],
-	});
-	console.log = console.info = console.warn = () => {};
-}
+export { setupLogging };
 
 server.post("/upload", timeout(15000), async (c) => {
 	let uploadedFile: File | null = null;

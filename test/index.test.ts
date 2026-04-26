@@ -36,10 +36,12 @@ const { mockLogger } = vi.hoisted(() => ({
 vi.mock("@logtape/logtape", () => ({
 	getLogger: vi.fn(() => mockLogger),
 	configure: vi.fn(),
+	getConfig: vi.fn(() => null),
 	getConsoleSink: vi.fn(),
 	dispose: vi.fn(),
 }));
 vi.mock("@logtape/pretty", () => ({
+	getPrettyFormatter: vi.fn(() => vi.fn(() => "")),
 	prettyFormatter: vi.fn(),
 }));
 

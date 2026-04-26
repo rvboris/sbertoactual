@@ -2,11 +2,11 @@ import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { configure, dispose, getLogger } from "@logtape/logtape";
-import { prettyFormatter } from "@logtape/pretty";
+import { dispose, getLogger } from "@logtape/logtape";
 import { Command, Flags } from "@oclif/core";
 import { parse } from "csv-parse";
 import * as dotenv from "dotenv";
+import { setupLogging } from "./logging.js";
 import { ActualProcessor, type TransactionRecord } from "./processor.js";
 
 const logger = getLogger(["sber-actual"]);
@@ -132,18 +132,7 @@ export default class SberToActual extends Command {
 
 	async init(): Promise<void> {
 		dotenv.config({ quiet: true });
-		await configure({
-			sinks: {
-				stdout: (record) => {
-					process.stdout.write(prettyFormatter(record));
-				},
-			},
-			loggers: [
-				{ category: ["sber-actual"], lowestLevel: "info", sinks: ["stdout"] },
-				{ category: ["logtape"], lowestLevel: "warning", sinks: ["stdout"] },
-			],
-		});
-		console.log = console.info = console.warn = () => {};
+		await setupLogging();
 	}
 
 	async run(): Promise<void> {

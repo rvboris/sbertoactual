@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActualProcessor } from "../src/processor.js";
 import { server, setupLogging, start } from "../src/server.js";
 
+let isLogtapeConfigured = false;
+
 vi.mock("@hono/node-server", () => ({
 	serve: vi.fn(),
 }));
@@ -16,18 +18,29 @@ vi.mock("@logtape/logtape", async (importOriginal) => {
 	const actual = await importOriginal<typeof logtape>();
 	return {
 		...actual,
-		configure: vi.fn(),
+		configure: vi.fn(async () => {
+			isLogtapeConfigured = true;
+		}),
+		getConfig: vi.fn(() => (isLogtapeConfigured ? {} : null)),
 	};
 });
 
 describe("Server", () => {
 	beforeEach(() => {
+		isLogtapeConfigured = false;
 		vi.clearAllMocks();
 	});
 
 	it("should configure logging", async () => {
 		await setupLogging();
 		expect(logtape.configure).toHaveBeenCalled();
+	});
+
+	it("should configure logging only once", async () => {
+		await setupLogging();
+		await setupLogging();
+
+		expect(logtape.configure).toHaveBeenCalledTimes(1);
 	});
 
 	it("should start the server", async () => {
