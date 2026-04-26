@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.2.0](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v3.1.0...sbertoactual-v3.2.0) (2026-04-26)
+
+
+### Features
+
+* disable word wrapping in logs ([4e16684](https://github.com/rvboris/sbertoactual/commit/4e16684685aece8aab27e83bf6f2f47364df2fc1))
+* properly hide category name in logs using custom formatter ([e513a88](https://github.com/rvboris/sbertoactual/commit/e513a8846aedaf0e63c71b824506c206c9fc2fdf))
+
 ## [3.1.0](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v3.0.0...sbertoactual-v3.1.0) (2026-04-26)
 
 
