@@ -146,6 +146,7 @@ export class ActualProcessor {
 
 	async setupCategories(records: TransactionRecord[]): Promise<void> {
 		const { groupName } = this.config;
+		const startTime = performance.now();
 
 		const uniqueCategories = [
 			...new Set(records.map((r) => r.Category).filter(Boolean)),
@@ -174,7 +175,8 @@ export class ActualProcessor {
 			}
 		}
 
-		logger.info`Category sync complete. Added ${createdCount} new categories.`;
+		const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+		logger.info`Category sync complete. Added ${createdCount} new categories in ${duration}s.`;
 	}
 
 	async upload(records: TransactionRecord[]): Promise<void> {
@@ -188,6 +190,7 @@ export class ActualProcessor {
 
 	async uploadTransactions(records: TransactionRecord[]): Promise<void> {
 		const { accountId } = this.config;
+		const startTime = performance.now();
 
 		const accounts = await api.getAccounts();
 		const account = accounts.find((a) => a.id === accountId);
@@ -224,12 +227,25 @@ export class ActualProcessor {
 
 		logger.info`Uploading ${transactions.length} transactions to "${account.name}"...`;
 
-		await api.importTransactions(
-			accountId,
-			transactions as unknown as Parameters<typeof api.importTransactions>[1],
-		);
+		// Chunk large imports to avoid potential timeouts or memory issues
+		const CHUNK_SIZE = 100;
+		for (let i = 0; i < transactions.length; i += CHUNK_SIZE) {
+			const chunk = transactions.slice(i, i + CHUNK_SIZE);
+			const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+			const totalChunks = Math.ceil(transactions.length / CHUNK_SIZE);
 
-		logger.info`Import successful!`;
+			if (totalChunks > 1) {
+				logger.info`Uploading chunk ${chunkNum}/${totalChunks} (${chunk.length} transactions)...`;
+			}
+
+			await api.importTransactions(
+				accountId,
+				chunk as unknown as Parameters<typeof api.importTransactions>[1],
+			);
+		}
+
+		const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+		logger.info`Import successful! Processed ${transactions.length} transactions in ${duration}s.`;
 	}
 
 	async list(): Promise<{ name: string; id: string }[]> {

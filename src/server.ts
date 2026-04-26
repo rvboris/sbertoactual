@@ -8,6 +8,7 @@ import { configure, dispose, getLogger } from "@logtape/logtape";
 import { prettyFormatter } from "@logtape/pretty";
 import * as dotenv from "dotenv";
 import { Hono } from "hono";
+import { timeout } from "hono/timeout";
 import { ActualProcessor, type ProcessorConfig } from "./processor.js";
 
 dotenv.config({ quiet: true });
@@ -51,7 +52,7 @@ export async function setupLogging(): Promise<void> {
 	console.log = console.info = console.warn = () => {};
 }
 
-server.post("/upload", async (c) => {
+server.post("/upload", timeout(15000), async (c) => {
 	let uploadedFile: File | null = null;
 
 	try {
@@ -139,9 +140,17 @@ export async function start(): Promise<void> {
 	try {
 		await setupLogging();
 		const port = Number(process.env.PORT) || 3000;
-		serve({ fetch: server.fetch, port, hostname: "0.0.0.0" });
+		const s = serve(
+			{ fetch: server.fetch, port, hostname: "0.0.0.0" },
+			(info) => {
+				logger.info`Server listening on http://${info.address}:${info.port}`;
+			},
+		);
 
-		logger.info`Server listening on http://localhost:${port}`;
+		// Increase timeouts for large file processing
+		if (s && "setTimeout" in s) {
+			s.setTimeout(0);
+		}
 	} catch (err) {
 		console.error("Failed to start server:", err);
 		process.exit(1);
