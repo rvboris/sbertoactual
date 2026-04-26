@@ -136,9 +136,16 @@ export class ActualProcessor {
 	}
 
 	async setup(records: TransactionRecord[]): Promise<void> {
-		const { groupName } = this.config;
-
 		await this.initApi();
+		try {
+			await this.setupCategories(records);
+		} finally {
+			await api.shutdown();
+		}
+	}
+
+	async setupCategories(records: TransactionRecord[]): Promise<void> {
+		const { groupName } = this.config;
 
 		const uniqueCategories = [
 			...new Set(records.map((r) => r.Category).filter(Boolean)),
@@ -168,14 +175,19 @@ export class ActualProcessor {
 		}
 
 		logger.info`Category sync complete. Added ${createdCount} new categories.`;
-
-		await api.shutdown();
 	}
 
 	async upload(records: TransactionRecord[]): Promise<void> {
-		const { accountId } = this.config;
-
 		await this.initApi();
+		try {
+			await this.uploadTransactions(records);
+		} finally {
+			await api.shutdown();
+		}
+	}
+
+	async uploadTransactions(records: TransactionRecord[]): Promise<void> {
+		const { accountId } = this.config;
 
 		const accounts = await api.getAccounts();
 		const account = accounts.find((a) => a.id === accountId);
@@ -218,8 +230,6 @@ export class ActualProcessor {
 		);
 
 		logger.info`Import successful!`;
-
-		await api.shutdown();
 	}
 
 	async list(): Promise<{ name: string; id: string }[]> {

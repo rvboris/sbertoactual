@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
+import * as api from "@actual-app/api";
 import { configure, dispose, getLogger } from "@logtape/logtape";
 import { prettyFormatter } from "@logtape/pretty";
 import * as dotenv from "dotenv";
@@ -47,6 +48,7 @@ export async function setupLogging(): Promise<void> {
 			{ category: ["logtape"], lowestLevel: "warning", sinks: ["stdout"] },
 		],
 	});
+	console.log = console.info = console.warn = () => {};
 }
 
 server.post("/upload", async (c) => {
@@ -101,9 +103,13 @@ server.post("/upload", async (c) => {
 			? await processor.convertPdf(inputFilePath)
 			: await processor.convert(inputFilePath);
 
-		await processor.setup(records);
-
-		await processor.upload(records);
+		await processor.initApi();
+		try {
+			await processor.setupCategories(records);
+			await processor.uploadTransactions(records);
+		} finally {
+			await api.shutdown();
+		}
 
 		logger.info`Upload successful for: ${uploadedFile.name}`;
 		return c.json({
