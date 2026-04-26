@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as nodeServer from "@hono/node-server";
+import * as api from "@actual-app/api";
 import * as logtape from "@logtape/logtape";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActualProcessor } from "../src/processor.js";
@@ -9,6 +10,7 @@ vi.mock("@hono/node-server", () => ({
 	serve: vi.fn(),
 }));
 vi.mock("../src/processor.js");
+vi.mock("@actual-app/api");
 vi.mock("node:fs/promises");
 vi.mock("@logtape/logtape", async (importOriginal) => {
 	const actual = await importOriginal<typeof logtape>();
@@ -72,15 +74,17 @@ describe("Server", () => {
 
 		const convertPdfSpy = vi.fn().mockResolvedValue(mockRecords);
 		const convertSpy = vi.fn().mockResolvedValue([]);
-		const setupSpy = vi.fn().mockResolvedValue(undefined);
-		const uploadSpy = vi.fn().mockResolvedValue(undefined);
+		const initApiSpy = vi.fn().mockResolvedValue(undefined);
+		const setupCategoriesSpy = vi.fn().mockResolvedValue(undefined);
+		const uploadTransactionsSpy = vi.fn().mockResolvedValue(undefined);
 
 		vi.mocked(ActualProcessor).mockImplementation(
 			class {
 				convertPdf = convertPdfSpy;
 				convert = convertSpy;
-				setup = setupSpy;
-				upload = uploadSpy;
+				initApi = initApiSpy;
+				setupCategories = setupCategoriesSpy;
+				uploadTransactions = uploadTransactionsSpy;
 			} as unknown as typeof ActualProcessor,
 		);
 
@@ -106,8 +110,10 @@ describe("Server", () => {
 
 		expect(convertPdfSpy).toHaveBeenCalled();
 		expect(convertSpy).not.toHaveBeenCalled();
-		expect(setupSpy).toHaveBeenCalled();
-		expect(uploadSpy).toHaveBeenCalled();
+		expect(initApiSpy).toHaveBeenCalled();
+		expect(setupCategoriesSpy).toHaveBeenCalled();
+		expect(uploadTransactionsSpy).toHaveBeenCalled();
+		expect(api.shutdown).toHaveBeenCalled();
 	});
 
 	it("should process CSV file successfully", async () => {
@@ -122,16 +128,16 @@ describe("Server", () => {
 		];
 
 		const convertSpy = vi.fn().mockResolvedValue(mockRecords);
-		const setupSpy = vi.fn().mockResolvedValue(undefined);
-		const uploadSpy = vi.fn().mockResolvedValue(undefined);
 		const initApiSpy = vi.fn().mockResolvedValue(undefined);
+		const setupCategoriesSpy = vi.fn().mockResolvedValue(undefined);
+		const uploadTransactionsSpy = vi.fn().mockResolvedValue(undefined);
 
 		vi.mocked(ActualProcessor).mockImplementation(
 			class {
 				convert = convertSpy;
-				setup = setupSpy;
-				upload = uploadSpy;
 				initApi = initApiSpy;
+				setupCategories = setupCategoriesSpy;
+				uploadTransactions = uploadTransactionsSpy;
 			} as unknown as typeof ActualProcessor,
 		);
 
@@ -147,18 +153,16 @@ describe("Server", () => {
 			body: form,
 		});
 
-		if (response.status === 500) {
-			console.error("Response body:", await response.text());
-		}
-
 		expect(response.status).toBe(200);
 		const body = await response.json();
 		expect(body.status).toBe("success");
 		expect(body.transactionsProcessed).toBe(1);
 
 		expect(convertSpy).toHaveBeenCalled();
-		expect(setupSpy).toHaveBeenCalled();
-		expect(uploadSpy).toHaveBeenCalled();
+		expect(initApiSpy).toHaveBeenCalled();
+		expect(setupCategoriesSpy).toHaveBeenCalled();
+		expect(uploadTransactionsSpy).toHaveBeenCalled();
+		expect(api.shutdown).toHaveBeenCalled();
 	});
 
 	it("should return 500 if processing fails", async () => {
