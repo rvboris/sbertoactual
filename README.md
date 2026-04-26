@@ -110,6 +110,13 @@ curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://loc
 - **Run tests:** `pnpm test`
 - **Linting:** `pnpm run lint`
 
+## Release Process
+
+- npm releases are managed by `release-please` via `.github/workflows/npm-publish.yml`.
+- Every push to `master` updates or creates the release PR.
+- When the release PR is merged, the workflow validates the release commit and publishes the package to npm with provenance.
+- GitHub Actions repository setting `Allow GitHub Actions to create and approve pull requests` must be enabled for this flow to work.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

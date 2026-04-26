@@ -1,34 +1,107 @@
-name: Publish to npm
+name: Release Please
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      sha: ${{ steps.release.outputs.sha }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  resolve-release-pr:
+    needs: release-please
+    runs-on: ubuntu-latest
+    outputs:
+      head_ref: ${{ steps.find.outputs.head_ref }}
     permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Find open release PR
+        id: find
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: 'master',
+              per_page: 100,
+            });
+
+            const releasePr = prs.find((pr) =>
+              pr.head.ref.startsWith('release-please--branches--master')
+            );
+
+            core.setOutput('head_ref', releasePr?.head.ref ?? '');
+
+  test-release-pr:
+    needs: resolve-release-pr
+    if: ${{ needs.resolve-release-pr.outputs.head_ref != '' }}
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      ref: ${{ needs.resolve-release-pr.outputs.head_ref }}
+    permissions:
+      contents: read
+      pull-requests: write
+
+  test-release-artifact:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      ref: ${{ needs.release-please.outputs.sha }}
+    permissions:
+      contents: read
       pull-requests: write
 
   publish-npm:
-    needs: test
+    needs:
+      - release-please
+      - test-release-artifact
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - name: Checkout release commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release-please.outputs.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.30.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
