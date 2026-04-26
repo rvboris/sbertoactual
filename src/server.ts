@@ -44,6 +44,7 @@ export async function setupLogging(): Promise<void> {
 				process.stdout.write(
 					prettyFormatter(record, {
 						timestamp: "time",
+						category: null,
 					}),
 				);
 			},
