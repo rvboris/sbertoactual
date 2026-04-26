@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.2](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.1...sbertoactual-v4.0.2) (2026-04-26)
+
+
+### Bug Fixes
+
+* restore logging with existing LogTape config ([6e0b431](https://github.com/rvboris/sbertoactual/commit/6e0b4316a673e76b7f508297579353f66dc17feb))
+
 ## [4.0.1](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.0...sbertoactual-v4.0.1) (2026-04-26)
 
 

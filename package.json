@@ -1,6 +1,6 @@
 {
 	"name": "@rvboris/sbertoactual",
-	"version": "4.0.1",
+	"version": "4.0.2",
 	"description": "Automating the import of Sberbank statements into Actual Budget",
 	"main": "dist/index.js",
 	"bin": {
