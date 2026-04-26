@@ -1,29 +1,29 @@
-[🇷🇺 Русский](README.ru.md) | [🇬🇧 English](README.md)
+[🇷🇺 Русский](README.md) | [🇬🇧 English](README.en.md)
 
 # sbertoactual
 
-Automating the import of Sberbank statements (debit and credit cards) into [Actual Budget](https://actualbudget.org/).
+Автоматизация импорта выписок Сбербанка (дебетовые и кредитные карты) в [Actual Budget](https://actualbudget.org/).
 
-## Features
+## Особенности
 
-- **Format Support:** Direct import of CSV statements and PDF statements in `SBER_DEBIT_2603` format (uses [`@rvboris/sberparse`](https://www.npmjs.com/package/@rvboris/sberparse)).
-- **Category Automation:** Automatic creation of groups and categories in Actual Budget based on statement data.
-- **Deduplication:** Each transaction gets a unique `imported_id` (based on date, amount, and description), preventing the re-import of the same data.
-- **Two Operation Modes:** Flexible CLI for local use and a REST API server for integrations.
+- **Поддержка форматов:** Прямой импорт CSV и PDF выписок в формате `SBER_DEBIT_2603` (использует [`@rvboris/sberparse`](https://www.npmjs.com/package/@rvboris/sberparse)).
+- **Автоматизация категорий:** Автоматическое создание групп и категорий в Actual Budget на основе данных из выписки.
+- **Дедупликация:** Каждая транзакция получает уникальный `imported_id` (на основе даты, суммы и описания), что предотвращает повторный импорт одних и тех же данных.
+- **Два режима работы:** Гибкий CLI для локального использования и REST API сервер для интеграций.
 
-## Quick Start (Docker)
+## Быстрый старт (Docker)
 
-This is the recommended way to run the application, as it includes all necessary dependencies.
+Это рекомендуемый способ запуска, так как он включает все необходимые зависимости.
 
-### Docker Compose (Recommended)
-1. Create a `.env` file based on the example in the "Configuration" section.
-2. Start the service:
+### Docker Compose (рекомендуется)
+1. Создайте файл `.env` на основе примера в разделе "Конфигурация".
+2. Запустите сервис:
 ```bash
 docker compose up -d
 ```
 
 ### Docker CLI
-If you prefer running it manually:
+Если вы предпочитаете обычный запуск:
 ```bash
 docker build -t sbertoactual .
 docker run -d \
@@ -34,89 +34,91 @@ docker run -d \
   sbertoactual
 ```
 
-## Local Installation
+## Локальная установка
 
-### Requirements
-- **Node.js:** v24+ (matching `.nvmrc`)
-- **pnpm:** Recommended (via Corepack)
+### Требования
+- **Node.js:** v24+ (согласно `.nvmrc`)
+- **pnpm:** Рекомендуется (через Corepack)
 
-### Installing Dependencies
-1. Install Node.js packages:
+### Установка зависимостей
+1. Установите Node.js пакеты:
    ```bash
    pnpm install
    ```
 
-## Configuration (.env)
+## Конфигурация (.env)
 
-| Variable | Description |
+| Переменная | Описание |
 | :--- | :--- |
-| `ACTUAL_SERVER_URL` | URL of your Actual Budget server |
-| `ACTUAL_SERVER_PASSWORD` | User password |
-| `ACTUAL_SYNC_ID` | Your budget's Sync ID |
-| `ACTUAL_BUDGET_PASSWORD` | Budget encryption password (if set) |
-| `ACTUAL_ACCOUNT_ID` | Account ID in Actual Budget where transactions will be imported |
-| `ACTUAL_GROUP_NAME` | Name of the category group. Default: "Импорт из Сбера" |
-| `PORT` | Server port. Default: `3000` |
-| `API_KEY` | (Optional) Secret key to protect the server. If set, requests must include `X-API-Key` header |
+| `ACTUAL_SERVER_URL` | URL вашего сервера Actual Budget |
+| `ACTUAL_SERVER_PASSWORD` | Пароль пользователя |
+| `ACTUAL_SYNC_ID` | Sync ID вашего бюджета |
+| `ACTUAL_BUDGET_PASSWORD` | Пароль шифрования бюджета (если установлен) |
+| `ACTUAL_ACCOUNT_ID` | ID счета в Actual Budget, куда пойдут транзакции |
+| `ACTUAL_GROUP_NAME` | Имя группы категорий. По умолчанию: "Импорт из Сбера" |
+| `PORT` | Порт сервера. По умолчанию: `3000` |
+| `API_KEY` | (Опционально) Секретный ключ для защиты сервера. Если установлен, запросы должны содержать заголовок `X-API-Key` |
 
-## Usage
+## Использование
 
-### Command Line Interface (CLI) Mode
-Place your statement file in the `data/` folder and run the command with the desired mode.
+### Режим командной строки (CLI)
+Положите файл выписки в папку `data/` и выполните команду с нужным режимом.
 
-Available `--mode` options:
+Доступные режимы `--mode`:
 
-- **`all` (default)**: Full import cycle. Sequentially runs `convert`, `setup`, and `upload`. The most convenient way for regular imports.
-- **`convert`**: Only processes the input file (`PDF` or `CSV`). Extracts transactions and saves them to `actual_import.csv` for later processing.
-- **`setup`**: Checks and creates categories. Scans processed transactions and automatically creates missing categories in Actual Budget to prevent upload errors.
-- **`upload`**: Uploads data only. Sends transactions to the Actual Budget server. Thanks to deduplication via `imported_id`, you can run this mode repeatedly without risking duplicates.
-- **`list`**: Utility mode. Lists all accounts from your Actual Budget with their IDs (helps find the correct `ACTUAL_ACCOUNT_ID` for config).
+- **`all` (по умолчанию)**: Полный цикл импорта. Выполняет последовательно `convert`, `setup` и `upload`. Самый удобный способ для регулярного импорта.
+- **`convert`**: Только обработка входного файла (`PDF` или `CSV`). Извлекает транзакции и сохраняет их в `actual_import.csv` для последующей обработки.
+- **`setup`**: Проверка и создание категорий. Сканирует обработанные транзакции и автоматически создает недостающие категории в Actual Budget, чтобы избежать ошибок при загрузке.
+- **`upload`**: Только загрузка данных. Отправляет транзакции на сервер Actual Budget. Благодаря дедупликации по `imported_id`, вы можете запускать этот режим повторно без риска дублей.
+- **`list`**: Служебный режим. Выводит список всех счетов из вашего Actual Budget с их ID (помогает найти нужный `ACTUAL_ACCOUNT_ID` для конфига).
 
-Example run via `pnpm`:
+Пример запуска через `pnpm`:
 ```bash
-# Import a file
+# Импорт файла
 env INPUT_FILE="my_statement.pdf" pnpm start -- --mode=all
 ```
 
-Or using the globally installed package:
+Или через установленный глобально пакет:
 ```bash
 sber-actual --mode=list
 ```
 
-### Server (API) Mode
-Start the server to automate uploads via HTTP:
+### Режим сервера (API)
+Запустите сервер для автоматизации загрузки через HTTP:
 ```bash
 pnpm run server
 ```
 
-Send a statement file using `curl`. If `API_KEY` is configured, include the header:
+Отправьте файл выписки через `curl`. Если настроен `API_KEY`, добавьте заголовок:
 ```bash
-# For PDF
+# Для PDF
 curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.pdf" http://localhost:3000/upload
 
-# For CSV
+# Для CSV
 curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://localhost:3000/upload
 ```
 
-## PDF Support
+## Поддержка PDF
 
-- PDF parsing uses `@rvboris/sberparse`.
-- Currently only `SBER_DEBIT_2603` statements are supported.
-- CSV import behavior is unchanged.
+- Для PDF используется `@rvboris/sberparse`.
+- Сейчас поддерживается только формат выписки `SBER_DEBIT_2603`.
+- Поведение CSV-импорта не меняется.
 
-## Development and Testing
+## Разработка и тестирование
 
-- **Type checking:** `pnpm run type-check`
-- **Run tests:** `pnpm test`
-- **Linting:** `pnpm run lint`
+- **Проверка типов:** `pnpm run type-check`
+- **Запуск тестов:** `pnpm test`
+- **Покрытие:** `pnpm run coverage`
+- **Линтинг:** `pnpm run lint`
+- **Руководство для контрибьюторов:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-## Release Process
+## Релизный процесс
 
-- npm releases are managed by `release-please` via `.github/workflows/npm-publish.yml`.
-- Every push to `master` updates or creates the release PR.
-- When the release PR is merged, the workflow validates the release commit and publishes the package to npm with provenance.
-- GitHub Actions repository setting `Allow GitHub Actions to create and approve pull requests` must be enabled for this flow to work.
+- npm-релизы управляются через `release-please` в `.github/workflows/npm-publish.yml`.
+- Каждый push в `master` обновляет или создаёт release PR.
+- После merge release PR workflow проверяет релизный коммит и публикует пакет в npm с provenance.
+- Для работы схемы в настройках репозитория GitHub Actions должен быть включён `Allow GitHub Actions to create and approve pull requests`.
 
-## License
+## Лицензия
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
