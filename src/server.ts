@@ -41,7 +41,11 @@ export async function setupLogging(): Promise<void> {
 	await configure({
 		sinks: {
 			stdout: (record) => {
-				process.stdout.write(prettyFormatter(record));
+				process.stdout.write(
+					prettyFormatter(record, {
+						timestamp: "time",
+					}),
+				);
 			},
 		},
 		loggers: [
