@@ -40,8 +40,10 @@ server.use("*", async (c, next) => {
 export async function setupLogging(): Promise<void> {
 	const formatter = getPrettyFormatter({
 		timestamp: "time",
-		categoryWidth: 0,
-	});
+		// Cast to any because the current type definition incorrectly omits 'category',
+		// but the runtime supports it to hide the category name.
+		category: () => "",
+	} as any);
 
 	await configure({
 		sinks: {
