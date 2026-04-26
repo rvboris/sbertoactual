@@ -75,3 +75,17 @@ pnpm run server
 - **Deduplication:** The project uses `imported_id` to ensure that running the upload script multiple times with the same data won't create duplicate transactions in Actual Budget.
 - **Security:** `NODE_TLS_REJECT_UNAUTHORIZED = '0'` is used in the scripts to bypass self-signed certificate issues. This should be used with caution in production environments.
 - **Data Persistence:** Local cache and metadata for Actual Budget are stored in the `./actual-data` directory.
+
+# graphify
+- **graphify** (`~/.agents/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
+When the user types `/graphify`, invoke the Skill tool with `skill: "graphify"` before doing anything else.
+
+## graphify
+
+This project may have a local graphify knowledge graph at `graphify-out/`.
+
+Rules:
+- If `graphify-out/GRAPH_REPORT.md` exists locally, use it for architecture or codebase questions
+- If `graphify-out/wiki/index.md` exists locally, navigate it instead of reading raw files
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` when a local graph is present
+- If a local graph exists and code files were modified in this session, run `graphify update .` to keep it current (AST-only, no API cost)

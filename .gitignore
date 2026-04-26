@@ -4,3 +4,6 @@ dist
 data/
 coverage/
 .gemini
+graphify-out/
+.graphify_python
+.opencode/

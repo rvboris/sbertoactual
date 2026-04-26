@@ -1,10 +1,13 @@
 import * as fs from "node:fs/promises";
+import * as nodeServer from "@hono/node-server";
 import * as logtape from "@logtape/logtape";
-import FormData from "form-data";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActualProcessor } from "../src/processor.js";
 import { server, setupLogging, start } from "../src/server.js";
 
+vi.mock("@hono/node-server", () => ({
+	serve: vi.fn(),
+}));
 vi.mock("../src/processor.js");
 vi.mock("node:fs/promises");
 vi.mock("@logtape/logtape", async (importOriginal) => {
@@ -26,39 +29,32 @@ describe("Server", () => {
 	});
 
 	it("should start the server", async () => {
-		// @ts-expect-error
-		const listenSpy = vi.spyOn(server, "listen").mockResolvedValue("");
 		await start();
-		expect(listenSpy).toHaveBeenCalled();
+		expect(nodeServer.serve).toHaveBeenCalled();
 	});
 
 	it("should return 400 if no file is uploaded", async () => {
 		const form = new FormData();
-		// Sending empty multipart form
-		const response = await server.inject({
+		const response = await server.request("/upload", {
 			method: "POST",
-			url: "/upload",
-			payload: form.getBuffer(),
-			headers: form.getHeaders(),
+			body: form,
 		});
 
-		expect(response.statusCode).toBe(400);
-		expect(JSON.parse(response.body)).toEqual({ error: "No file uploaded" });
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: "No file uploaded" });
 	});
 
 	it("should return 400 if file is not CSV or PDF", async () => {
 		const form = new FormData();
-		form.append("file", Buffer.from("test"), "test.txt");
+		form.append("file", new File(["test"], "test.txt", { type: "text/plain" }));
 
-		const response = await server.inject({
+		const response = await server.request("/upload", {
 			method: "POST",
-			url: "/upload",
-			payload: form.getBuffer(),
-			headers: form.getHeaders(),
+			body: form,
 		});
 
-		expect(response.statusCode).toBe(400);
-		expect(JSON.parse(response.body)).toEqual({
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({
 			error: "Only CSV or PDF files are allowed",
 		});
 	});
@@ -93,17 +89,18 @@ describe("Server", () => {
 		vi.mocked(fs.rm).mockResolvedValue(undefined);
 
 		const form = new FormData();
-		form.append("file", Buffer.from("%PDF-1.4..."), "test.pdf");
+		form.append(
+			"file",
+			new File(["%PDF-1.4..."], "test.pdf", { type: "application/pdf" }),
+		);
 
-		const response = await server.inject({
+		const response = await server.request("/upload", {
 			method: "POST",
-			url: "/upload",
-			payload: form.getBuffer(),
-			headers: form.getHeaders(),
+			body: form,
 		});
 
-		expect(response.statusCode).toBe(200);
-		const body = JSON.parse(response.body);
+		expect(response.status).toBe(200);
+		const body = await response.json();
 		expect(body.status).toBe("success");
 		expect(body.transactionsProcessed).toBe(1);
 
@@ -143,21 +140,19 @@ describe("Server", () => {
 		vi.mocked(fs.rm).mockResolvedValue(undefined);
 
 		const form = new FormData();
-		form.append("file", Buffer.from("Date;Payee;..."), "test.csv");
+		form.append("file", new File(["Date;Payee;..."], "test.csv", { type: "text/csv" }));
 
-		const response = await server.inject({
+		const response = await server.request("/upload", {
 			method: "POST",
-			url: "/upload",
-			payload: form.getBuffer(),
-			headers: form.getHeaders(),
+			body: form,
 		});
 
-		if (response.statusCode === 500) {
-			console.error("Response body:", response.body);
+		if (response.status === 500) {
+			console.error("Response body:", await response.text());
 		}
 
-		expect(response.statusCode).toBe(200);
-		const body = JSON.parse(response.body);
+		expect(response.status).toBe(200);
+		const body = await response.json();
 		expect(body.status).toBe("success");
 		expect(body.transactionsProcessed).toBe(1);
 
@@ -178,16 +173,14 @@ describe("Server", () => {
 		vi.mocked(fs.rm).mockResolvedValue(undefined);
 
 		const form = new FormData();
-		form.append("file", Buffer.from("Date;Payee;..."), "test.csv");
+		form.append("file", new File(["Date;Payee;..."], "test.csv", { type: "text/csv" }));
 
-		const response = await server.inject({
+		const response = await server.request("/upload", {
 			method: "POST",
-			url: "/upload",
-			payload: form.getBuffer(),
-			headers: form.getHeaders(),
+			body: form,
 		});
 
-		expect(response.statusCode).toBe(500);
-		expect(JSON.parse(response.body).status).toBe("error");
+		expect(response.status).toBe(500);
+		expect((await response.json()).status).toBe("error");
 	});
 });

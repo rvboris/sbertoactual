@@ -2,51 +2,37 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import multipart from "@fastify/multipart";
+import { serve } from "@hono/node-server";
 import { configure, dispose, getLogger } from "@logtape/logtape";
 import { prettyFormatter } from "@logtape/pretty";
 import * as dotenv from "dotenv";
-import fastify from "fastify";
+import { Hono } from "hono";
 import { ActualProcessor, type ProcessorConfig } from "./processor.js";
-
-declare module "fastify" {
-	interface FastifyRequest {
-		logger: ReturnType<typeof getLogger>;
-	}
-}
 
 dotenv.config({ quiet: true });
 
 const logger = getLogger(["sber-actual", "server"]);
-const API_KEY = process.env.API_KEY;
 
-export const server = fastify({
-	logger: false,
-});
+export const server = new Hono();
 
-server.decorateRequest("logger", {
-	getter() {
-		return logger;
-	},
-});
+server.use("*", async (c, next) => {
+	const startTime = performance.now();
+	const method = c.req.method;
+	const requestPath = c.req.path;
 
-server.addHook("onRequest", async (request, reply) => {
-	logger.info`Incoming request: ${request.method} ${request.url}`;
+	logger.info`Incoming request: ${method} ${requestPath}`;
 
-	if (API_KEY && request.headers["x-api-key"] !== API_KEY) {
-		logger.warn`Unauthorized access attempt: ${request.method} ${request.url}`;
-		return reply.status(401).send({ error: "Unauthorized" });
+	const apiKey = process.env.API_KEY;
+	if (apiKey && c.req.header("x-api-key") !== apiKey) {
+		logger.warn`Unauthorized access attempt: ${method} ${requestPath}`;
+		const response = c.json({ error: "Unauthorized" }, 401);
+		logger.info`Response sent: ${method} ${requestPath} - Status: ${response.status} - Time: ${(performance.now() - startTime).toFixed(2)}ms`;
+		return response;
 	}
-});
 
-server.addHook("onResponse", async (request, reply) => {
-	logger.info`Response sent: ${request.method} ${request.url} - Status: ${reply.statusCode} - Time: ${reply.elapsedTime.toFixed(2)}ms`;
-});
+	await next();
 
-server.register(multipart, {
-	limits: {
-		fileSize: 10 * 1024 * 1024, // 10MB limit
-	},
+	logger.info`Response sent: ${method} ${requestPath} - Status: ${c.res.status} - Time: ${(performance.now() - startTime).toFixed(2)}ms`;
 });
 
 export async function setupLogging(): Promise<void> {
@@ -63,19 +49,26 @@ export async function setupLogging(): Promise<void> {
 	});
 }
 
-server.post("/upload", async (request, reply) => {
-	const data = await request.file();
-	if (!data) {
-		return reply.status(400).send({ error: "No file uploaded" });
+server.post("/upload", async (c) => {
+	let uploadedFile: File | null = null;
+
+	try {
+		const formData = await c.req.formData();
+		const file = formData.get("file");
+		uploadedFile = file instanceof File ? file : null;
+	} catch {
+		return c.json({ error: "No file uploaded" }, 400);
 	}
 
-	const isPdf = data.filename.toLowerCase().endsWith(".pdf");
-	const isCsv = data.filename.toLowerCase().endsWith(".csv");
+	if (!uploadedFile) {
+		return c.json({ error: "No file uploaded" }, 400);
+	}
+
+	const isPdf = uploadedFile.name.toLowerCase().endsWith(".pdf");
+	const isCsv = uploadedFile.name.toLowerCase().endsWith(".csv");
 
 	if (!isPdf && !isCsv) {
-		return reply
-			.status(400)
-			.send({ error: "Only CSV or PDF files are allowed" });
+		return c.json({ error: "Only CSV or PDF files are allowed" }, 400);
 	}
 
 	const requestId = Math.random().toString(36).substring(7);
@@ -85,7 +78,10 @@ server.post("/upload", async (request, reply) => {
 		await fs.mkdir(tempDir, { recursive: true });
 		const inputFilePath = path.join(tempDir, isPdf ? "input.pdf" : "input.csv");
 
-		await fs.writeFile(inputFilePath, await data.toBuffer());
+		await fs.writeFile(
+			inputFilePath,
+			Buffer.from(await uploadedFile.arrayBuffer()),
+		);
 
 		const config: ProcessorConfig = {
 			serverURL: process.env.ACTUAL_SERVER_URL || "",
@@ -99,7 +95,7 @@ server.post("/upload", async (request, reply) => {
 
 		const processor = new ActualProcessor(config);
 
-		logger.info`Processing upload for file: ${data.filename}`;
+		logger.info`Processing upload for file: ${uploadedFile.name}`;
 
 		const records = isPdf
 			? await processor.convertPdf(inputFilePath)
@@ -109,20 +105,20 @@ server.post("/upload", async (request, reply) => {
 
 		await processor.upload(records);
 
-		logger.info`Upload successful for: ${data.filename}`;
-		return {
+		logger.info`Upload successful for: ${uploadedFile.name}`;
+		return c.json({
 			status: "success",
 			transactionsProcessed: records.length,
-		};
+		});
 	} catch (err: unknown) {
 		const message = err instanceof Error ? err.message : String(err);
 
 		logger.error`Processing error: ${message}`;
 
-		return reply.status(500).send({
+		return c.json({
 			status: "error",
 			message,
-		});
+		}, 500);
 	} finally {
 		try {
 			await fs.rm(tempDir, { recursive: true, force: true });
@@ -137,7 +133,7 @@ export async function start(): Promise<void> {
 	try {
 		await setupLogging();
 		const port = Number(process.env.PORT) || 3000;
-		await server.listen({ port, host: "0.0.0.0" });
+		serve({ fetch: server.fetch, port, hostname: "0.0.0.0" });
 
 		logger.info`Server listening on http://localhost:${port}`;
 	} catch (err) {

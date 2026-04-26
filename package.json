@@ -52,21 +52,20 @@
 	"type": "module",
 	"dependencies": {
 		"@actual-app/api": "^26.2.0",
-		"@fastify/multipart": "^9.4.0",
+		"@hono/node-server": "^2.0.0",
 		"@logtape/logtape": "^2.0.2",
 		"@logtape/pretty": "^2.0.2",
 		"@oclif/core": "^4.8.0",
-		"@rvboris/sberparse": "^1.1.2",
+		"@rvboris/sberparse": "^1.2.0",
 		"csv-parse": "^6.1.0",
 		"date-fns": "^4.1.0",
 		"dotenv": "^17.3.1",
-		"fastify": "^5.7.4"
+		"hono": "^4.12.15"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.3",
 		"@types/node": "^25.3.0",
 		"@vitest/coverage-v8": "^4.0.18",
-		"form-data": "^4.0.5",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.18"
