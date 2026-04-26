@@ -76,6 +76,14 @@ pnpm run server
 - **Security:** `NODE_TLS_REJECT_UNAUTHORIZED = '0'` is used in the scripts to bypass self-signed certificate issues. This should be used with caution in production environments.
 - **Data Persistence:** Local cache and metadata for Actual Budget are stored in the `./actual-data` directory.
 
+## Release Process
+
+- **Version check first:** Before preparing any new release, always verify the latest actual version from the remote repository and package metadata. Check GitHub releases/tags and the local `package.json`/`.release-please-manifest.json` state after fetching remote refs to avoid releasing from a stale version.
+- **Do not bump locally:** For normal releases, do not edit `package.json`, `.release-please-manifest.json`, or `CHANGELOG.md` manually. Commit the actual code/docs change using a Conventional Commit (`fix:`, `feat:`, etc.) and push it to `master`.
+- **Release Please flow:** A push to `master` triggers GitHub Actions. Release Please opens or updates a release PR back into `master` from `release-please--branches--master--components--sbertoactual`, where it bumps the version and updates `CHANGELOG.md` and `.release-please-manifest.json`.
+- **Publish after merge:** Merge the Release Please PR to create the GitHub release/tag and run the publish jobs. Do not manually create release tags or GitHub releases unless automation fails and the user explicitly approves a manual recovery.
+- **Verify with gh:** After merging a release PR or preparing a release, always check release status with GitHub CLI: inspect the release PR, workflow runs, and resulting release/tag using commands such as `gh pr view`, `gh run list`, `gh run watch`, `gh release list`, and `gh release view`.
+
 # graphify
 - **graphify** (`~/.agents/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
 When the user types `/graphify`, invoke the Skill tool with `skill: "graphify"` before doing anything else.
