@@ -1,6 +1,6 @@
 {
 	"name": "@rvboris/sbertoactual",
-	"version": "3.2.1",
+	"version": "3.1.2",
 	"description": "Automating the import of Sberbank statements into Actual Budget",
 	"main": "dist/index.js",
 	"bin": {
@@ -22,7 +22,7 @@
 		"upload": "tsx src/index.ts --mode=upload",
 		"list": "tsx src/index.ts --mode=list",
 		"server": "tsx src/server.ts",
-		"type-check": "tsc --project tsconfig.test.json",
+		"type-check": "tsc --project tsconfig.test.json --skipLibCheck",
 		"test": "pnpm run type-check && vitest run",
 		"coverage": "pnpm run type-check && vitest run --coverage",
 		"lint": "biome lint .",
@@ -53,22 +53,22 @@
 	"dependencies": {
 		"@actual-app/api": "^26.2.0",
 		"@hono/node-server": "^2.0.0",
-		"@logtape/logtape": "^2.0.2",
-		"@logtape/pretty": "^2.0.2",
-		"@oclif/core": "^4.8.0",
-		"@rvboris/sberparse": "^1.2.0",
-		"csv-parse": "^6.1.0",
+		"@logtape/logtape": "^2.0.5",
+		"@logtape/pretty": "^2.0.5",
+		"@oclif/core": "^4.10.6",
+		"@rvboris/sberparse": "^1.2.6",
+		"csv-parse": "^6.2.1",
 		"date-fns": "^4.1.0",
-		"dotenv": "^17.3.1",
+		"dotenv": "^17.4.2",
 		"hono": "^4.12.15"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.3",
-		"@types/node": "^25.3.0",
-		"@vitest/coverage-v8": "^4.0.18",
+		"@biomejs/biome": "2.4.13",
+		"@types/node": "^25.6.0",
+		"@vitest/coverage-v8": "^4.1.5",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.0.18"
+		"vitest": "^4.1.5"
 	},
 	"engines": {
 		"node": ">=24"
