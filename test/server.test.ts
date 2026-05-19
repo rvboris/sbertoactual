@@ -222,4 +222,30 @@ describe("Server", () => {
 		expect(response.status).toBe(500);
 		expect((await response.json()).status).toBe("error");
 	});
+
+	it("should return a readable message for object rejections", async () => {
+		vi.mocked(ActualProcessor).mockImplementation(
+			class {
+				convert = vi.fn().mockRejectedValue({ code: "out-of-sync-migrations" });
+			} as unknown as typeof ActualProcessor,
+		);
+
+		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+		vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+		vi.mocked(fs.rm).mockResolvedValue(undefined);
+
+		const form = new FormData();
+		form.append("file", new File(["Date;Payee;..."], "test.csv", { type: "text/csv" }));
+
+		const response = await server.request("/upload", {
+			method: "POST",
+			body: form,
+		});
+
+		expect(response.status).toBe(500);
+		expect(await response.json()).toEqual({
+			status: "error",
+			message: "out-of-sync-migrations",
+		});
+	});
 });

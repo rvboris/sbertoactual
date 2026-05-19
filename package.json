@@ -51,7 +51,7 @@
 	"license": "MIT",
 	"type": "module",
 	"dependencies": {
-		"@actual-app/api": "^26.2.0",
+		"@actual-app/api": "^26.5.2",
 		"@hono/node-server": "^2.0.0",
 		"@logtape/logtape": "^2.0.5",
 		"@logtape/pretty": "^2.0.5",

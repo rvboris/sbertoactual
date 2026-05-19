@@ -52,6 +52,11 @@ describe("ActualProcessor", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(api.init).mockResolvedValue(
+			{} as Awaited<ReturnType<typeof api.init>>,
+		);
+		vi.mocked(api.downloadBudget).mockResolvedValue(undefined);
+		vi.mocked(api.shutdown).mockResolvedValue(undefined);
 		processor = new ActualProcessor(config);
 	});
 
@@ -59,6 +64,26 @@ describe("ActualProcessor", () => {
 		await processor.initApi();
 		expect(api.init).toHaveBeenCalled();
 		expect(api.downloadBudget).toHaveBeenCalled();
+	});
+
+	it("should normalize out-of-sync migration errors during API init", async () => {
+		vi.mocked(api.downloadBudget).mockRejectedValue({
+			error: "out-of-sync-migrations",
+		});
+
+		await expect(processor.initApi()).rejects.toThrow(
+			/Actual API version mismatch/,
+		);
+		expect(api.shutdown).toHaveBeenCalled();
+	});
+
+	it("should normalize non-Error API init rejections", async () => {
+		vi.mocked(api.downloadBudget).mockRejectedValue({ code: "boom" });
+
+		await expect(processor.initApi()).rejects.toThrow(
+			/Failed to initialize Actual API: boom/,
+		);
+		expect(api.shutdown).toHaveBeenCalled();
 	});
 
 	it("should convert PDF records via sberparse", async () => {

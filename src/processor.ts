@@ -6,8 +6,21 @@ import { getLogger } from "@logtape/logtape";
 import { parsePdf } from "@rvboris/sberparse";
 import { parse as parseCsv } from "csv-parse";
 import { format, parse as parseDate } from "date-fns";
+import { stringifyUnknownError } from "./errors.js";
 
 const logger = getLogger(["sber-actual", "processor"]);
+
+function isOutOfSyncMigrationsError(error: unknown): boolean {
+	return stringifyUnknownError(error).includes("out-of-sync-migrations");
+}
+
+async function safeShutdownApi(): Promise<void> {
+	try {
+		await api.shutdown();
+	} catch (shutdownError) {
+		logger.warn`Failed to shut down Actual API after an error: ${stringifyUnknownError(shutdownError)}`;
+	}
+}
 
 export function formatDate(dateStr: string): string {
 	const datePart = dateStr.split(" ")[0] || "";
@@ -62,15 +75,29 @@ export class ActualProcessor {
 
 		await fs.mkdir(actualDataDir, { recursive: true });
 
-		await api.init({
-			serverURL,
-			password: serverPassword,
-			dataDir: actualDataDir,
-		});
+		try {
+			await api.init({
+				serverURL,
+				password: serverPassword,
+				dataDir: actualDataDir,
+			});
 
-		logger.info`Opening budget...`;
+			logger.info`Opening budget...`;
 
-		await api.downloadBudget(syncId, { password: budgetPassword });
+			await api.downloadBudget(syncId, { password: budgetPassword });
+		} catch (error) {
+			await safeShutdownApi();
+
+			if (isOutOfSyncMigrationsError(error)) {
+				throw new Error(
+					"Actual API version mismatch: the bundled @actual-app/api is older than the Actual server or budget schema. Update @actual-app/api so it is not behind the server version.",
+				);
+			}
+
+			throw new Error(
+				`Failed to initialize Actual API: ${stringifyUnknownError(error)}`,
+			);
+		}
 	}
 
 	async convertPdf(inputFilePath: string): Promise<TransactionRecord[]> {
@@ -97,8 +124,9 @@ export class ActualProcessor {
 
 			return records;
 		} catch (error) {
-			logger.error`PDF parsing failed: ${error}`;
-			throw new Error(`Failed to parse PDF statement: ${error}`);
+			const message = stringifyUnknownError(error);
+			logger.error`PDF parsing failed: ${message}`;
+			throw new Error(`Failed to parse PDF statement: ${message}`);
 		}
 	}
 
