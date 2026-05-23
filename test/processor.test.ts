@@ -55,6 +55,7 @@ describe("ActualProcessor", () => {
 		vi.mocked(api.init).mockResolvedValue(
 			{} as Awaited<ReturnType<typeof api.init>>,
 		);
+		vi.mocked(api.getServerVersion).mockResolvedValue("26.5.2" as never);
 		vi.mocked(api.downloadBudget).mockResolvedValue(undefined);
 		vi.mocked(api.shutdown).mockResolvedValue(undefined);
 		processor = new ActualProcessor(config);
@@ -63,6 +64,24 @@ describe("ActualProcessor", () => {
 	it("should initialize API", async () => {
 		await processor.initApi();
 		expect(api.init).toHaveBeenCalled();
+		expect(api.getServerVersion).toHaveBeenCalled();
+		expect(api.downloadBudget).toHaveBeenCalled();
+	});
+
+	it("should fail fast when bundled API is older than the server", async () => {
+		vi.mocked(api.getServerVersion).mockResolvedValue("26.6.0" as never);
+
+		await expect(processor.initApi()).rejects.toThrow(
+			/Bundled @actual-app\/api 26\.5\.2 is older than the Actual server 26\.6\.0/,
+		);
+		expect(api.downloadBudget).not.toHaveBeenCalled();
+		expect(api.shutdown).toHaveBeenCalled();
+	});
+
+	it("should continue when version probe is unavailable", async () => {
+		vi.mocked(api.getServerVersion).mockRejectedValue(new Error("probe down"));
+
+		await processor.initApi();
 		expect(api.downloadBudget).toHaveBeenCalled();
 	});
 
