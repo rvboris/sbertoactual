@@ -59,6 +59,8 @@ docker run -d \
 | `PORT` | Server port. Default: `3000` |
 | `API_KEY` | (Optional) Secret key to protect the server. If set, requests must include `X-API-Key` header |
 
+Important: your `@actual-app/api` version must not lag behind your Actual server version. If logs mention `out-of-sync-migrations`, it almost always means the local API client is too old for the current budget schema on the server.
+
 ## Usage
 
 ### Command Line Interface (CLI) Mode
@@ -102,6 +104,7 @@ curl -X POST -H "X-API-Key: your-secret-key" -F "file=@statement.csv" http://loc
 
 - PDF parsing uses `@rvboris/sberparse`.
 - CSV import behavior is unchanged.
+- `out-of-sync-migrations` is not a PDF parsing problem: it points to a compatibility issue between `@actual-app/api` and the Actual server.
 
 ## Development and Testing
 

@@ -1,13 +1,76 @@
 import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { createRequire } from "node:module";
 import * as api from "@actual-app/api";
 import { getLogger } from "@logtape/logtape";
 import { parsePdf } from "@rvboris/sberparse";
 import { parse as parseCsv } from "csv-parse";
 import { format, parse as parseDate } from "date-fns";
+import { stringifyUnknownError } from "./errors.js";
 
 const logger = getLogger(["sber-actual", "processor"]);
+
+function isOutOfSyncMigrationsError(error: unknown): boolean {
+	return stringifyUnknownError(error).includes("out-of-sync-migrations");
+}
+
+function compareVersions(left: string, right: string): number {
+	const parse = (version: string): number[] =>
+		version
+			.split(/[.-]/)
+			.map((part) => Number.parseInt(part, 10))
+			.map((part) => (Number.isFinite(part) ? part : 0));
+
+	const leftParts = parse(left);
+	const rightParts = parse(right);
+	const length = Math.max(leftParts.length, rightParts.length);
+
+	for (let i = 0; i < length; i++) {
+		const diff = (leftParts[i] || 0) - (rightParts[i] || 0);
+		if (diff !== 0) return diff;
+	}
+
+	return 0;
+}
+
+async function getBundledActualApiVersion(): Promise<string> {
+	try {
+		const require = createRequire(import.meta.url);
+		let currentDir = path.dirname(require.resolve("@actual-app/api"));
+
+		for (let i = 0; i < 4; i++) {
+			const packageJsonPath = path.join(currentDir, "package.json");
+			try {
+				const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8")) as {
+					name?: string;
+					version?: string;
+				};
+
+				if (packageJson.name === "@actual-app/api" && packageJson.version) {
+					return packageJson.version;
+				}
+			} catch {
+				// keep walking up
+			}
+
+			currentDir = path.dirname(currentDir);
+		}
+
+	} catch (error) {
+		logger.warn`Unable to determine bundled @actual-app/api version: ${stringifyUnknownError(error)}`;
+	}
+
+	return "unknown";
+}
+
+async function safeShutdownApi(): Promise<void> {
+	try {
+		await api.shutdown();
+	} catch (shutdownError) {
+		logger.warn`Failed to shut down Actual API after an error: ${stringifyUnknownError(shutdownError)}`;
+	}
+}
 
 export function formatDate(dateStr: string): string {
 	const datePart = dateStr.split(" ")[0] || "";
@@ -57,20 +120,75 @@ export class ActualProcessor {
 	async initApi(): Promise<void> {
 		const { serverURL, serverPassword, syncId, budgetPassword } = this.config;
 		const actualDataDir = path.join(this.config.dataDir, "actual-data");
+		const bundledActualApiVersion = await getBundledActualApiVersion();
 
 		logger.info`Connecting to server: ${serverURL}`;
 
 		await fs.mkdir(actualDataDir, { recursive: true });
 
-		await api.init({
-			serverURL,
-			password: serverPassword,
-			dataDir: actualDataDir,
-		});
+		try {
+			await api.init({
+				serverURL,
+				password: serverPassword,
+				dataDir: actualDataDir,
+			});
 
-		logger.info`Opening budget...`;
+			let serverVersion: string | undefined;
+			try {
+				const serverVersionProbe = await api.getServerVersion();
+				serverVersion =
+					typeof serverVersionProbe === "string"
+						? serverVersionProbe
+						: typeof serverVersionProbe === "object" &&
+							serverVersionProbe !== null &&
+							"version" in serverVersionProbe &&
+							typeof serverVersionProbe.version === "string"
+							? serverVersionProbe.version
+							: undefined;
 
-		await api.downloadBudget(syncId, { password: budgetPassword });
+				if (!serverVersion) {
+					logger.warn`Actual server version probe returned an unexpected result; continuing without version check.`;
+				} else {
+					logger.info`Actual server version: ${serverVersion}; bundled client version: ${bundledActualApiVersion}`;
+					if (
+						bundledActualApiVersion !== "unknown" &&
+						compareVersions(bundledActualApiVersion, serverVersion) < 0
+					) {
+						throw new Error(
+							`Bundled @actual-app/api ${bundledActualApiVersion} is older than the Actual server ${serverVersion}. Update @actual-app/api before retrying.`,
+						);
+					}
+				}
+			} catch (versionError) {
+				if (serverVersion) {
+					throw versionError;
+				}
+				logger.warn`Skipping Actual version probe: ${stringifyUnknownError(versionError)}`;
+			}
+
+			logger.info`Opening budget...`;
+
+			await api.downloadBudget(syncId, { password: budgetPassword });
+		} catch (error) {
+			await safeShutdownApi();
+
+			if (
+				error instanceof Error &&
+				error.message.startsWith("Bundled @actual-app/api ")
+			) {
+				throw error;
+			}
+
+			if (isOutOfSyncMigrationsError(error)) {
+				throw new Error(
+					`Actual API version mismatch: the bundled @actual-app/api may be older than the Actual server or the budget schema. Update @actual-app/api and retry.`,
+				);
+			}
+
+			throw new Error(
+				`Failed to initialize Actual API: ${stringifyUnknownError(error)}`,
+			);
+		}
 	}
 
 	async convertPdf(inputFilePath: string): Promise<TransactionRecord[]> {
@@ -97,8 +215,9 @@ export class ActualProcessor {
 
 			return records;
 		} catch (error) {
-			logger.error`PDF parsing failed: ${error}`;
-			throw new Error(`Failed to parse PDF statement: ${error}`);
+			const message = stringifyUnknownError(error);
+			logger.error`PDF parsing failed: ${message}`;
+			throw new Error(`Failed to parse PDF statement: ${message}`);
 		}
 	}
 

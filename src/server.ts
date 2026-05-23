@@ -8,12 +8,27 @@ import { dispose, getLogger } from "@logtape/logtape";
 import * as dotenv from "dotenv";
 import { Hono } from "hono";
 import { timeout } from "hono/timeout";
+import { stringifyUnknownError } from "./errors.js";
 import { setupLogging } from "./logging.js";
 import { ActualProcessor, type ProcessorConfig } from "./processor.js";
 
 dotenv.config({ quiet: true });
 
 const logger = getLogger(["sber-actual", "server"]);
+
+let unhandledRejectionHandlerInstalled = false;
+
+function installUnhandledRejectionHandler(): void {
+	if (unhandledRejectionHandlerInstalled) {
+		return;
+	}
+
+	process.on("unhandledRejection", (reason) => {
+		logger.error`Unhandled promise rejection: ${stringifyUnknownError(reason)}`;
+	});
+
+	unhandledRejectionHandlerInstalled = true;
+}
 
 export const server = new Hono();
 
@@ -105,7 +120,7 @@ server.post("/upload", timeout(15000), async (c) => {
 			transactionsProcessed: records.length,
 		});
 	} catch (err: unknown) {
-		const message = err instanceof Error ? err.message : String(err);
+		const message = stringifyUnknownError(err);
 
 		logger.error`Processing error: ${message}`;
 
@@ -126,6 +141,7 @@ server.post("/upload", timeout(15000), async (c) => {
 export async function start(): Promise<void> {
 	try {
 		await setupLogging();
+		installUnhandledRejectionHandler();
 		const port = Number(process.env.PORT) || 3000;
 		const s = serve(
 			{ fetch: server.fetch, port, hostname: "0.0.0.0" },

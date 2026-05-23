@@ -270,9 +270,9 @@ describe("SberToActual", () => {
 				{ id: "cat-id", name: "Cat" } as unknown as MockCategory as never,
 			]);
 
-			vi.spyOn(api, "importTransactions").mockResolvedValue({
-				status: "ok",
-			});
+			vi.spyOn(api, "importTransactions").mockResolvedValue(
+				{} as Awaited<ReturnType<typeof api.importTransactions>>,
+			);
 
 			await command.upload();
 
@@ -316,7 +316,9 @@ describe("SberToActual", () => {
 			const importSpy = vi
 				.spyOn(api, "importTransactions")
 
-				.mockResolvedValue({ status: "ok" });
+				.mockResolvedValue(
+					{} as Awaited<ReturnType<typeof api.importTransactions>>,
+				);
 
 			await command.upload();
 

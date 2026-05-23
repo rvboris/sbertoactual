@@ -75,6 +75,8 @@ pnpm run server
 - **Deduplication:** The project uses `imported_id` to ensure that running the upload script multiple times with the same data won't create duplicate transactions in Actual Budget.
 - **Security:** `NODE_TLS_REJECT_UNAUTHORIZED = '0'` is used in the scripts to bypass self-signed certificate issues. This should be used with caution in production environments.
 - **Data Persistence:** Local cache and metadata for Actual Budget are stored in the `./actual-data` directory.
+- **Dependency version changes:** When `package.json` dependency versions change, always run a real local install (`pnpm install`, not only `pnpm install --lockfile-only`) so `node_modules` matches the manifest and lockfile before verification.
+- **Verify after dependency changes:** After changing dependency versions, rerun local checks against the freshly installed dependencies before opening or updating a PR. At minimum run `pnpm run type-check` and `pnpm test`; include `pnpm run build` when the change can affect runtime or packaging.
 
 ## Release Process
 
