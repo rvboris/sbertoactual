@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.0.3](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.2...sbertoactual-v4.0.3) (2026-05-23)
+
+
+### Bug Fixes
+
+* handle Actual API version mismatch errors ([23d16fb](https://github.com/rvboris/sbertoactual/commit/23d16fbe69f98214a044d65d7a5038425cb210f3))
+* handle Actual API version mismatch in upload flow ([fd3fc55](https://github.com/rvboris/sbertoactual/commit/fd3fc55e3141a264b9f094bafc08f59ad58c73c7))
+* preflight Actual version compatibility ([fb8262f](https://github.com/rvboris/sbertoactual/commit/fb8262f3c111f2a40a4a776a038286d8f20de996))
+
 ## [4.0.2](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.1...sbertoactual-v4.0.2) (2026-04-26)
 
 
