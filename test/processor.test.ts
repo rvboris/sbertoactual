@@ -1,4 +1,7 @@
 import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
 import { Readable } from "node:stream";
 import * as api from "@actual-app/api";
 import { parsePdf } from "@rvboris/sberparse";
@@ -10,6 +13,23 @@ vi.mock("node:fs");
 vi.mock("@rvboris/sberparse", () => ({
 	parsePdf: vi.fn(),
 }));
+
+const require = createRequire(import.meta.url);
+const apiPackage = JSON.parse(
+	await readFile(
+		resolve(dirname(require.resolve("@actual-app/api")), "../package.json"),
+		"utf8",
+	),
+);
+if (
+	apiPackage.name !== "@actual-app/api" ||
+	typeof apiPackage.version !== "string" ||
+	!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(apiPackage.version)
+) {
+	throw new Error("Invalid installed @actual-app/api package metadata");
+}
+const bundledVersion: string = apiPackage.version;
+const newerServerVersion = `${Number(bundledVersion.split(".")[0]) + 1}.0.0`;
 
 const stringToStream = (str: string) => {
 	const stream = new Readable();
@@ -55,7 +75,7 @@ describe("ActualProcessor", () => {
 		vi.mocked(api.init).mockResolvedValue(
 			{} as Awaited<ReturnType<typeof api.init>>,
 		);
-		vi.mocked(api.getServerVersion).mockResolvedValue("26.9.0" as never);
+		vi.mocked(api.getServerVersion).mockResolvedValue(bundledVersion as never);
 		vi.mocked(api.downloadBudget).mockResolvedValue(undefined);
 		vi.mocked(api.shutdown).mockResolvedValue(undefined);
 		processor = new ActualProcessor(config);
@@ -69,10 +89,12 @@ describe("ActualProcessor", () => {
 	});
 
 	it("should fail fast when bundled API is older than the server", async () => {
-		vi.mocked(api.getServerVersion).mockResolvedValue("26.10.0" as never);
+		vi.mocked(api.getServerVersion).mockResolvedValue(newerServerVersion as never);
 
 		await expect(processor.initApi()).rejects.toThrow(
-			/Bundled @actual-app\/api 26\.9\.0 is older than the Actual server 26\.10\.0/,
+			new Error(
+				`Bundled @actual-app/api ${bundledVersion} is older than the Actual server ${newerServerVersion}. Update @actual-app/api before retrying.`,
+			),
 		);
 		expect(api.downloadBudget).not.toHaveBeenCalled();
 		expect(api.shutdown).toHaveBeenCalled();
