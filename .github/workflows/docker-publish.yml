@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: '17 1 * * *'
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Expected commit SHA to validate
+        required: false
+        type: string
 
 env:
   REGISTRY_GHCR: ghcr.io
