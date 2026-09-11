@@ -55,7 +55,7 @@ describe("ActualProcessor", () => {
 		vi.mocked(api.init).mockResolvedValue(
 			{} as Awaited<ReturnType<typeof api.init>>,
 		);
-		vi.mocked(api.getServerVersion).mockResolvedValue("26.5.2" as never);
+		vi.mocked(api.getServerVersion).mockResolvedValue("26.9.0" as never);
 		vi.mocked(api.downloadBudget).mockResolvedValue(undefined);
 		vi.mocked(api.shutdown).mockResolvedValue(undefined);
 		processor = new ActualProcessor(config);
@@ -69,10 +69,10 @@ describe("ActualProcessor", () => {
 	});
 
 	it("should fail fast when bundled API is older than the server", async () => {
-		vi.mocked(api.getServerVersion).mockResolvedValue("26.6.0" as never);
+		vi.mocked(api.getServerVersion).mockResolvedValue("26.10.0" as never);
 
 		await expect(processor.initApi()).rejects.toThrow(
-			/Bundled @actual-app\/api 26\.5\.2 is older than the Actual server 26\.6\.0/,
+			/Bundled @actual-app\/api 26\.9\.0 is older than the Actual server 26\.10\.0/,
 		);
 		expect(api.downloadBudget).not.toHaveBeenCalled();
 		expect(api.shutdown).toHaveBeenCalled();
@@ -188,7 +188,9 @@ describe("ActualProcessor", () => {
 
 		vi.mocked(api.getAccounts).mockResolvedValue([{ id: "acc", name: "Acc" }]);
 
-		vi.mocked(api.getCategories).mockResolvedValue([{ id: "c1", name: "Cat" }]);
+		vi.mocked(api.getCategories).mockResolvedValue([
+			{ id: "c1", name: "Cat", group_id: "g1" },
+		]);
 
 		await processor.upload(records);
 		expect(api.importTransactions).toHaveBeenCalled();

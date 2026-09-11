@@ -3,11 +3,16 @@ updates:
   - package-ecosystem: "pnpm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
+      actual-app-api:
+        patterns:
+          - "@actual-app/api"
       all-dependencies:
         patterns:
           - "*"
+        exclude-patterns:
+          - "@actual-app/api"
 
   - package-ecosystem: "github-actions"
     directory: "/"
