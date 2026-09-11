@@ -29,7 +29,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  dispatch-release-pr-checks:
+  approve-release-pr-checks:
     needs: release-please
     runs-on: ubuntu-latest
     permissions:
@@ -37,7 +37,7 @@ jobs:
       pull-requests: read
       actions: write
     steps:
-      - name: Dispatch checks for the release PR
+      - name: Approve checks for the release PR
         uses: actions/github-script@v8
         with:
           script: |
@@ -48,7 +48,7 @@ jobs:
             });
             const candidates = prs.filter(pr => pr.head.ref === branch);
             if (candidates.length === 0) {
-              core.info('No open release PR; no checks to dispatch.');
+              core.info('No open release PR; no checks to approve.');
               return;
             }
             if (candidates.length !== 1) {
@@ -70,11 +70,57 @@ jobs:
             if (!/^[0-9a-f]{40}$/.test(pr.head.sha) || ref.object.sha !== pr.head.sha) {
               throw new Error('Release PR and branch SHA do not match');
             }
-            core.info(`Dispatching checks for PR #${pr.number}, ref ${branch}, SHA ${pr.head.sha}`);
-            for (const workflow_id of ['test.yml', 'docker-publish.yml']) {
-              await github.rest.actions.createWorkflowDispatch({
-                owner, repo, workflow_id, ref: branch, inputs: { expected_sha: pr.head.sha },
+            const expectedSha = pr.head.sha;
+            core.info(`Checking PR #${pr.number}, ref ${branch}, SHA ${expectedSha}`);
+            for (const filename of ['test.yml', 'docker-publish.yml']) {
+              const { data: workflow } = await github.rest.actions.getWorkflow({
+                owner, repo, workflow_id: filename,
               });
+              let latest;
+              for (let attempt = 0; attempt < 12; attempt++) {
+                const { data } = await github.rest.actions.listWorkflowRuns({
+                  owner, repo, workflow_id: workflow.id,
+                  event: 'pull_request', head_sha: expectedSha, per_page: 100,
+                });
+                latest = data.workflow_runs.reduce((newest, run) =>
+                  !newest || run.id > newest.id ? run : newest, undefined);
+                if (latest) break;
+                if (attempt < 11) await new Promise(resolve => setTimeout(resolve, 5000));
+              }
+              if (!latest) {
+                throw new Error(`No pull_request run for ${filename} at ${expectedSha} after 12 attempts`);
+              }
+              const { data: currentPr } = await github.rest.pulls.get({
+                owner, repo, pull_number: pr.number,
+              });
+              validateIdentity(currentPr);
+              const { data: currentRef } = await github.rest.git.getRef({
+                owner, repo, ref: `heads/${branch}`,
+              });
+              if (currentPr.head.sha !== expectedSha || currentRef.object.sha !== expectedSha) {
+                throw new Error('Release PR or branch changed before approval');
+              }
+              const { data: run } = await github.rest.actions.getWorkflowRun({
+                owner, repo, run_id: latest.id,
+              });
+              if (run.workflow_id !== workflow.id || run.event !== 'pull_request' ||
+                  run.head_sha !== expectedSha || run.head_branch !== branch ||
+                  run.head_repository?.full_name !== `${owner}/${repo}` ||
+                  run.actor?.login !== 'github-actions[bot]') {
+                throw new Error(`Invalid workflow run identity for ${filename}, run ${run.id}`);
+              }
+              if (!run.pull_requests?.some(associated => associated.number === pr.number)) {
+                throw new Error(`Run ${run.id} is missing association with release PR #${pr.number}`);
+              }
+              if (run.conclusion === 'action_required') {
+                await github.rest.actions.approveWorkflowRun({ owner, repo, run_id: run.id });
+                core.info(`Approved ${filename} run ${run.id} for PR #${pr.number} at ${expectedSha}`);
+              } else if ((run.conclusion == null && ['queued', 'in_progress'].includes(run.status)) ||
+                         run.conclusion === 'success') {
+                core.info(`${filename} run ${run.id}: ${run.conclusion ?? run.status}`);
+              } else {
+                throw new Error(`${filename} run ${run.id} cannot be approved: ${run.conclusion ?? run.status}`);
+              }
             }
 
   test-release-artifact:
