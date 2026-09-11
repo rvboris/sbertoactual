@@ -15,6 +15,20 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Validate dispatched commit
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const expected = context.payload.inputs?.expected_sha;
+            const releaseRef = 'refs/heads/release-please--branches--master--components--sbertoactual';
+            if (context.ref === releaseRef && !expected) {
+              throw new Error('Release branch dispatch requires expected_sha');
+            }
+            if (expected && (!/^[0-9a-f]{40}$/.test(expected) || expected !== context.sha)) {
+              throw new Error('Dispatched expected_sha must be a lowercase 40-hex SHA matching context.sha');
+            }
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:

@@ -2,6 +2,12 @@ name: Test
 
 on:
   workflow_call:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Expected commit SHA to validate
+        required: true
+        type: string
   pull_request:
     branches: ["master"]
 

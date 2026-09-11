@@ -29,43 +29,53 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  resolve-release-pr:
+  dispatch-release-pr-checks:
     needs: release-please
     runs-on: ubuntu-latest
-    outputs:
-      head_ref: ${{ steps.find.outputs.head_ref }}
     permissions:
       contents: read
       pull-requests: read
+      actions: write
     steps:
-      - name: Find open release PR
-        id: find
+      - name: Dispatch checks for the release PR
         uses: actions/github-script@v8
         with:
           script: |
+            const branch = 'release-please--branches--master--components--sbertoactual';
+            const { owner, repo } = context.repo;
             const prs = await github.paginate(github.rest.pulls.list, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              base: 'master',
-              per_page: 100,
+              owner, repo, state: 'open', base: 'master', per_page: 100,
             });
-
-            const releasePr = prs.find((pr) =>
-              pr.head.ref.startsWith('release-please--branches--master')
-            );
-
-            core.setOutput('head_ref', releasePr?.head.ref ?? '');
-
-  test-release-pr:
-    needs: resolve-release-pr
-    if: ${{ needs.resolve-release-pr.outputs.head_ref != '' }}
-    uses: ./.github/workflows/reusable-test.yml
-    with:
-      ref: ${{ needs.resolve-release-pr.outputs.head_ref }}
-    permissions:
-      contents: read
-      pull-requests: write
+            const candidates = prs.filter(pr => pr.head.ref === branch);
+            if (candidates.length === 0) {
+              core.info('No open release PR; no checks to dispatch.');
+              return;
+            }
+            if (candidates.length !== 1) {
+              throw new Error('Ambiguous release PR identity');
+            }
+            const validateIdentity = pr => {
+              const sameRepo = side => side?.repo?.owner?.login === owner && side.repo.name === repo;
+              if (pr.state !== 'open' || pr.head.ref !== branch || pr.base.ref !== 'master' ||
+                  !sameRepo(pr.head) || !sameRepo(pr.base) || pr.user?.login !== 'github-actions[bot]') {
+                throw new Error('Invalid release PR identity');
+              }
+            };
+            validateIdentity(candidates[0]);
+            const { data: pr } = await github.rest.pulls.get({
+              owner, repo, pull_number: candidates[0].number,
+            });
+            validateIdentity(pr);
+            const { data: ref } = await github.rest.git.getRef({ owner, repo, ref: `heads/${branch}` });
+            if (!/^[0-9a-f]{40}$/.test(pr.head.sha) || ref.object.sha !== pr.head.sha) {
+              throw new Error('Release PR and branch SHA do not match');
+            }
+            core.info(`Dispatching checks for PR #${pr.number}, ref ${branch}, SHA ${pr.head.sha}`);
+            for (const workflow_id of ['test.yml', 'docker-publish.yml']) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner, repo, workflow_id, ref: branch, inputs: { expected_sha: pr.head.sha },
+              });
+            }
 
   test-release-artifact:
     needs: release-please
