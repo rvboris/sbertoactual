@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.0.4](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.3...sbertoactual-v4.0.4) (2026-09-11)
+
+
+### Bug Fixes
+
+* approve trusted release PR workflow runs ([#22](https://github.com/rvboris/sbertoactual/issues/22)) ([2b85087](https://github.com/rvboris/sbertoactual/commit/2b850875cdc620d1e9df44bf2f74201ff35a7b84))
+* keep Actual API dependency current ([#18](https://github.com/rvboris/sbertoactual/issues/18)) ([7b6a14d](https://github.com/rvboris/sbertoactual/commit/7b6a14d5b5c42ad2e390d5d1dfcf0b81c1f3c888))
+* reconcile automated Docker updates daily ([#20](https://github.com/rvboris/sbertoactual/issues/20)) ([b444222](https://github.com/rvboris/sbertoactual/commit/b4442227840ab63c2937559d1749f1e38f013255))
+* run required checks on release PR commits ([#21](https://github.com/rvboris/sbertoactual/issues/21)) ([063db43](https://github.com/rvboris/sbertoactual/commit/063db434fb104b031b20c0197d77b3346cfabc80))
+
 ## [4.0.3](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.2...sbertoactual-v4.0.3) (2026-05-23)
 
 
