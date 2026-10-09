@@ -7,7 +7,6 @@ import * as api from "@actual-app/api";
 import { dispose, getLogger } from "@logtape/logtape";
 import * as dotenv from "dotenv";
 import { Hono } from "hono";
-import { timeout } from "hono/timeout";
 import { stringifyUnknownError } from "./errors.js";
 import { setupLogging } from "./logging.js";
 import { ActualProcessor, type ProcessorConfig } from "./processor.js";
@@ -28,6 +27,14 @@ function installUnhandledRejectionHandler(): void {
 	});
 
 	unhandledRejectionHandlerInstalled = true;
+}
+
+function parseMaxUploadBytes(raw: string | undefined, fallbackMb: number): number {
+	const mb = Number(raw);
+	if (!Number.isFinite(mb) || mb <= 0) {
+		return fallbackMb * 1024 * 1024;
+	}
+	return mb * 1024 * 1024;
 }
 
 export const server = new Hono();
@@ -54,7 +61,7 @@ server.use("*", async (c, next) => {
 
 export { setupLogging };
 
-server.post("/upload", timeout(15000), async (c) => {
+server.post("/upload", async (c) => {
 	let uploadedFile: File | null = null;
 
 	try {
@@ -74,6 +81,17 @@ server.post("/upload", timeout(15000), async (c) => {
 
 	if (!isPdf && !isCsv) {
 		return c.json({ error: "Only CSV or PDF files are allowed" }, 400);
+	}
+
+	const maxBytes = parseMaxUploadBytes(process.env.MAX_UPLOAD_MB, 20);
+	if (uploadedFile.size > maxBytes) {
+		logger.warn`Upload too large: ${uploadedFile.name} - ${uploadedFile.size} bytes (limit ${maxBytes})`;
+		return c.json(
+			{
+				error: `File too large. Limit is ${maxBytes / (1024 * 1024)} MB`,
+			},
+			413,
+		);
 	}
 
 	const requestId = Math.random().toString(36).substring(7);
