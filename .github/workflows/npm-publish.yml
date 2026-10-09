@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+  schedule:
+    # ponytail: backstop for bot-merged PRs (GITHUB_TOKEN pushes don't trigger workflows); picks up missed releases within an hour
+    - cron: "0 * * * *"
 
 permissions:
   contents: write
