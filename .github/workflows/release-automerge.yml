@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   auto-merge:
-    if: github.event.pull_request.user.login == 'app/github-actions' && startsWith(github.event.pull_request.head.ref, 'release-please--')
+    if: startsWith(github.event.pull_request.head.ref, 'release-please--') && contains(github.event.pull_request.user.login, 'github-actions')
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge
