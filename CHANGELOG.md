@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.0.5](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.4...sbertoactual-v4.0.5) (2026-10-09)
+
+
+### Bug Fixes
+
+* auto-merge release-please PRs ([#27](https://github.com/rvboris/sbertoactual/issues/27)) ([c3a1be2](https://github.com/rvboris/sbertoactual/commit/c3a1be2ace048c8602a2f473a0baa47a4c55676b))
+* bump @actual-app/api to 26.10.0 for updated Actual server ([#23](https://github.com/rvboris/sbertoactual/issues/23)) ([9249896](https://github.com/rvboris/sbertoactual/commit/92498967475060fcf6316ab003d4caa68be295bf))
+* retitle dependabot actual-api PRs as fix to trigger releases ([#24](https://github.com/rvboris/sbertoactual/issues/24)) ([03bfc61](https://github.com/rvboris/sbertoactual/commit/03bfc61a42a6ddd02f0f40b3bc5119d170dababf))
+
 ## [4.0.4](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.3...sbertoactual-v4.0.4) (2026-09-11)
 
 
