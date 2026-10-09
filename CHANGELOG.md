@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.0.6](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.5...sbertoactual-v4.0.6) (2026-10-09)
+
+
+### Bug Fixes
+
+* auto-merge all dependabot dependency PRs ([#29](https://github.com/rvboris/sbertoactual/issues/29)) ([b027866](https://github.com/rvboris/sbertoactual/commit/b0278662af55e61f4aca5608fb4644934b392268))
+* match github-actions bot login in release automerge condition ([#31](https://github.com/rvboris/sbertoactual/issues/31)) ([e2c7334](https://github.com/rvboris/sbertoactual/commit/e2c73349e6dc0fef9bd988b5b08e154b053d9d4d))
+
 ## [4.0.5](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.4...sbertoactual-v4.0.5) (2026-10-09)
 
 
