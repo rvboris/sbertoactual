@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.0.7](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.6...sbertoactual-v4.0.7) (2026-10-10)
+
+
+### Bug Fixes
+
+* hourly release-please run as backstop for bot merges ([#32](https://github.com/rvboris/sbertoactual/issues/32)) ([bea54e9](https://github.com/rvboris/sbertoactual/commit/bea54e9a110b3b0e6901e43dad4f35b3aaaa8953))
+* **server:** remove upload timeout racing cleanup, add configurable upload size limit ([#34](https://github.com/rvboris/sbertoactual/issues/34)) ([f8f360f](https://github.com/rvboris/sbertoactual/commit/f8f360f656857dfdad677deb450831e53e8f7b28))
+
 ## [4.0.6](https://github.com/rvboris/sbertoactual/compare/sbertoactual-v4.0.5...sbertoactual-v4.0.6) (2026-10-09)
 
 
