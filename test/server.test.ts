@@ -81,6 +81,33 @@ describe("Server", () => {
 		expect(await response.json()).toEqual({ error: "No file uploaded" });
 	});
 
+	it("should return 413 if file exceeds MAX_UPLOAD_MB", async () => {
+		const form = new FormData();
+		form.append(
+			"file",
+			new File([new Uint8Array(2 * 1024 * 1024)], "big.csv", {
+				type: "text/csv",
+			}),
+		);
+
+		const previous = process.env.MAX_UPLOAD_MB;
+		process.env.MAX_UPLOAD_MB = "1";
+		try {
+			const response = await server.request("/upload", {
+				method: "POST",
+				body: form,
+			});
+
+			expect(response.status).toBe(413);
+		} finally {
+			if (previous === undefined) {
+				process.env.MAX_UPLOAD_MB = "";
+			} else {
+				process.env.MAX_UPLOAD_MB = previous;
+			}
+		}
+	});
+
 	it("should return 400 if file is not CSV or PDF", async () => {
 		const form = new FormData();
 		form.append("file", new File(["test"], "test.txt", { type: "text/plain" }));
